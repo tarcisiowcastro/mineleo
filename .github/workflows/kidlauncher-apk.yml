@@ -1,0 +1,35 @@
+name: Build kidlauncher APK
+
+on:
+  push:
+    paths:
+      - "kidlauncher/**"
+      - ".github/workflows/kidlauncher-apk.yml"
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Grant execute permission for gradlew
+        run: |
+          cd kidlauncher
+          gradle wrapper --gradle-version 8.7
+          chmod +x gradlew
+
+      - name: Build debug APK
+        run: |
+          cd kidlauncher
+          ./gradlew assembleDebug
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kidlauncher-debug-apk
+          path: kidlauncher/app/build/outputs/apk/debug/app-debug.apk
