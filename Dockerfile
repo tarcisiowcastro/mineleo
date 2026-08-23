@@ -10,4 +10,4 @@ WORKDIR /luanti
 VOLUME ["/luanti/world", "/luanti/mods"]
 EXPOSE 30000/udp
 
-ENTRYPOINT ["minetestserver", "--config", "/luanti/minetest.conf"]
+ENTRYPOINT ["/usr/games/minetestserver", "--config", "/luanti/minetest.conf"]
