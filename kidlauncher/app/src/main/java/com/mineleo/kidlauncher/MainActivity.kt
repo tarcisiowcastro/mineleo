@@ -8,12 +8,12 @@ import android.os.Bundle
 import android.widget.TextView
 import android.widget.Toast
 
-private const val MINECRAFT_PACKAGE = "com.mojang.minecraftpe"
+private const val LUANTI_PACKAGE = "net.minetest.minetest"
 
 /**
  * Tela única: se o app é dono do dispositivo (dpm set-device-owner), habilita
- * o modo Lock Task para si mesmo e para o Minecraft, e então abre o Minecraft.
- * Sem provisionamento de device-owner, apenas abre o Minecraft normalmente
+ * o modo Lock Task para si mesmo e para o Luanti, e então abre o Luanti.
+ * Sem provisionamento de device-owner, apenas abre o Luanti normalmente
  * (o usuário pode ativar manualmente o "Pin de app" do Android para travar).
  */
 class MainActivity : Activity() {
@@ -26,17 +26,17 @@ class MainActivity : Activity() {
         val isOwner = dpm.isDeviceOwnerApp(packageName)
 
         if (isOwner) {
-            dpm.setLockTaskPackages(admin, arrayOf(packageName, MINECRAFT_PACKAGE))
+            dpm.setLockTaskPackages(admin, arrayOf(packageName, LUANTI_PACKAGE))
         }
 
-        val launchIntent = packageManager.getLaunchIntentForPackage(MINECRAFT_PACKAGE)
+        val launchIntent = packageManager.getLaunchIntentForPackage(LUANTI_PACKAGE)
         if (launchIntent == null) {
             setContentView(TextView(this).apply {
-                text = "Minecraft não está instalado neste aparelho."
+                text = "Luanti não está instalado neste aparelho."
                 textSize = 20f
                 setPadding(48, 96, 48, 48)
             })
-            Toast.makeText(this, "Instale o Minecraft (Bedrock) primeiro.", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Instale o Luanti (Minetest) primeiro.", Toast.LENGTH_LONG).show()
             return
         }
 
@@ -47,7 +47,7 @@ class MainActivity : Activity() {
 
         if (!isOwner) {
             // Sem device-owner, quem trava a tela é o próprio usuário via
-            // Configurações > Segurança > Fixar app, escolhendo o Minecraft.
+            // Configurações > Segurança > Fixar app, escolhendo o Luanti.
             finish()
         }
     }

@@ -1,11 +1,11 @@
 services:
-  mineleo:
+  luanti:
     build: .
-    container_name: mineleo
+    container_name: mineleo-luanti
     restart: unless-stopped
     ports:
-      - "19132:19132/udp"
+      - "30000:30000/udp"
     volumes:
-      - ./config.toml:/app/config.toml
-      - ./world:/app/world
-      - ./resources:/app/resources
+      - ./minetest.conf:/luanti/minetest.conf
+      - ./world:/luanti/world
+      - ./mods:/luanti/mods

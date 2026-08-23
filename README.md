@@ -1,61 +1,53 @@
 # MineLeo
 
-Servidor Minecraft Bedrock escrito em Go, usando a biblioteca [Dragonfly](https://github.com/df-mc/dragonfly).
+Servidor [Luanti](https://www.luanti.org/) (antigo Minetest) — 100%
+open-source e gratuito, servidor e cliente.
 
-## Requisitos
-
-- Go 1.21 ou superior
-
-## Configuração
-
-1. Copie o arquivo de configuração de exemplo:
-
-   ```bash
-   cp config.example.toml config.toml
-   ```
-
-2. Ajuste `config.toml` conforme necessário (endereço, nome do mundo, número máximo de jogadores, etc).
-
-## Executando
+## Rodando na VPS
 
 ```bash
-go mod tidy
-go run main.go
+git clone -b claude/mine-server-g8rzdh https://github.com/tarcisiowcastro/mineleo.git
+cd mineleo
+cp minetest.example.conf minetest.conf
+docker compose up -d --build
+docker compose logs -f
 ```
 
-O servidor abrirá por padrão na porta `19132/udp`, usada pelo protocolo do Minecraft Bedrock Edition.
+O servidor escuta na porta `30000/udp`. Libere no firewall se necessário:
 
-## Rodando com Docker
+```bash
+ufw allow 30000/udp
+```
 
-1. Na VPS, clone o repositório e entre na pasta:
+Os diretórios `world/` e `mods/` são persistidos via volume no host.
 
-   ```bash
-   git clone -b claude/mine-server-g8rzdh https://github.com/tarcisiowcastro/mineleo.git
-   cd mineleo
-   ```
+## Cliente (celular/PC)
 
-2. Crie o `config.toml` a partir do exemplo:
+1. Baixe o app **Luanti** (gratuito):
+   - Android: [Play Store](https://play.google.com/store/apps/details?id=net.minetest.minetest) ou [F-Droid](https://f-droid.org/packages/net.minetest.minetest/)
+   - Windows/Linux/Mac: [luanti.org/downloads](https://www.luanti.org/downloads/)
+2. Abra o app → **Join Game** (ou "Conectar a servidor").
+3. Endereço: `143.95.219.182` — Porta: `30000`.
 
-   ```bash
-   cp config.example.toml config.toml
-   ```
+Diferente do Minecraft, o Luanti não tem lista pública de servidores
+pré-carregada dentro do app — só entra quem tem o endereço configurado.
 
-3. Suba o container:
+## Administração
 
-   ```bash
-   docker compose up -d --build
-   ```
+Para virar admin, edite `minetest.conf`:
 
-4. Acompanhe os logs:
+```
+name = seu_nome_de_jogador
+```
 
-   ```bash
-   docker compose logs -f
-   ```
-
-O servidor ficará exposto na porta `19132/udp`. Os diretórios `world/` e `resources/` são persistidos via volume no host.
+Reinicie o container; na primeira vez que logar com esse nome, defina a
+senha pelo próprio jogo.
 
 ## Estrutura
 
-- `main.go` — ponto de entrada do servidor.
-- `config.example.toml` — modelo de configuração.
-- `world/` — dados do mundo (gerado automaticamente, ignorado pelo git).
+- `Dockerfile` / `docker-compose.yml` — build e execução do servidor Luanti.
+- `minetest.example.conf` — modelo de configuração.
+- `kidlauncher/` — app Android que abre direto o cliente e trava o
+  aparelho nele (kiosk mode).
+- `world/`, `mods/` — dados do servidor (gerados automaticamente, ignorados
+  pelo git).

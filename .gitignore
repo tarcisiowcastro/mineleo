@@ -1,8 +1,7 @@
-config.toml
+minetest.conf
 world/
-resources/
+mods/
 *.log
 .idea/
 .vscode/
 bin/
-mineleo
