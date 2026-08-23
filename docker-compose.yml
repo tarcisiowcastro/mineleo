@@ -1,0 +1,11 @@
+services:
+  mineleo:
+    build: .
+    container_name: mineleo
+    restart: unless-stopped
+    ports:
+      - "19132:19132/udp"
+    volumes:
+      - ./config.toml:/app/config.toml
+      - ./world:/app/world
+      - ./resources:/app/resources
