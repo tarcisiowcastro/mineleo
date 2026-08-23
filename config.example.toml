@@ -1,0 +1,25 @@
+# Copie este arquivo para config.toml e ajuste os valores conforme necessário.
+
+[Network]
+  Address = "0.0.0.0:19132"
+
+[World]
+  Name = "MineLeo"
+  Folder = "world"
+
+[Players]
+  MaxCount = 20
+  MaximumChunkRadius = 12
+  SaveData = true
+
+[Resources]
+  Folder = ""
+  Required = false
+
+[Server]
+  Name = "MineLeo Server"
+  ShutdownMessage = "Servidor encerrado."
+  AuthEnabled = true
+
+[Log]
+  Level = "info"

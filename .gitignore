@@ -1,0 +1,7 @@
+config.toml
+world/
+resources/
+*.log
+.idea/
+.vscode/
+bin/
