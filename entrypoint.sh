@@ -13,4 +13,9 @@ for mod in $MODS; do
   printf 'load_mod_%s = true\n' "$mod" >> "$WORLD_MT"
 done
 
+# minetestserver only scans /root/.minetest/mods for global mods; it has no
+# flag to point it at another path, so link our bind-mounted /luanti/mods in.
+mkdir -p /root/.minetest
+ln -sfn /luanti/mods /root/.minetest/mods
+
 exec /usr/games/minetestserver --config /luanti/minetest.conf
