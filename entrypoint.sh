@@ -3,7 +3,7 @@ set -e
 
 WORLD_DIR=/luanti/world
 WORLD_MT="$WORLD_DIR/world.mt"
-MODS="creatura animalia mobkit biofuel motorboat"
+MODS="creatura animalia mobkit biofuel motorboat priviledges_manager"
 
 mkdir -p "$WORLD_DIR"
 touch "$WORLD_MT"

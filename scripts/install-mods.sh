@@ -10,6 +10,7 @@ animalia https://github.com/ElCeejo/animalia
 mobkit https://github.com/mt-mods/mobkit
 biofuel https://github.com/Lokrates/Biofuel
 motorboat https://github.com/APercy/motorboat
+priviledges_manager https://github.com/JamesClarke7283/priviledges_manager
 "
 
 echo "$mods" | while read -r name url; do

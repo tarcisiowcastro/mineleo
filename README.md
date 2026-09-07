@@ -54,6 +54,10 @@ O servidor vem com mods de animais e barco, buscados via `scripts/install-mods.s
 - **[Motorboat](https://content.luanti.org/packages/apercy/motorboat/)** (+ dependências
   **[mobkit](https://content.luanti.org/packages/mt-mods/mobkit/)** e
   **[biofuel](https://content.luanti.org/packages/Lokrates/biofuel/)**) — barco a motor.
+- **[Privileges Manager](https://content.luanti.org/packages/Impulse/priviledges_manager/)** —
+  painel in-game (`/privman`) com toggle pra cada privilégio (`fly`, `fast`, `noclip`,
+  `teleport`...) de qualquer jogador. Exige a priv `privs`, que só quem estiver
+  configurado como admin (ver seção "Administração") tem por padrão.
 
 Pra baixar/atualizar os mods:
 
