@@ -7,7 +7,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /luanti
 
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
 VOLUME ["/luanti/world", "/luanti/mods"]
 EXPOSE 30000/udp
 
-ENTRYPOINT ["/usr/games/minetestserver", "--config", "/luanti/minetest.conf"]
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

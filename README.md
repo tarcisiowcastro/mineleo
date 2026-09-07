@@ -9,6 +9,7 @@ open-source e gratuito, servidor e cliente.
 git clone -b claude/mine-server-g8rzdh https://github.com/tarcisiowcastro/mineleo.git
 cd mineleo
 cp minetest.example.conf minetest.conf
+./scripts/install-mods.sh
 docker compose up -d --build
 docker compose logs -f
 ```
@@ -43,11 +44,34 @@ name = seu_nome_de_jogador
 Reinicie o container; na primeira vez que logar com esse nome, defina a
 senha pelo próprio jogo.
 
+## Mods instalados
+
+O servidor vem com mods de animais e barco, buscados via `scripts/install-mods.sh`:
+
+- **[Animalia](https://content.luanti.org/packages/ElCeejo/animalia/)** (+ dependência
+  **[Creatura](https://content.luanti.org/packages/ElCeejo/creatura/)**) — animais com
+  comportamento (cavalo montável, lobo/gato/raposa domesticáveis, reprodução).
+- **[Motorboat](https://content.luanti.org/packages/apercy/motorboat/)** (+ dependências
+  **[mobkit](https://content.luanti.org/packages/mt-mods/mobkit/)** e
+  **[biofuel](https://content.luanti.org/packages/Lokrates/biofuel/)**) — barco a motor.
+
+Pra baixar/atualizar os mods:
+
+```bash
+./scripts/install-mods.sh
+docker compose up -d --build
+```
+
+Os mods são ativados automaticamente no mundo pelo `entrypoint.sh` (roda a cada
+start do container) — não precisa editar `world.mt` na mão.
+
 ## Estrutura
 
 - `Dockerfile` / `docker-compose.yml` — build e execução do servidor Luanti.
+- `entrypoint.sh` — ativa os mods instalados no `world.mt` e sobe o `minetestserver`.
+- `scripts/install-mods.sh` — clona/atualiza os mods de terceiros em `mods/`.
 - `minetest.example.conf` — modelo de configuração.
 - `kidlauncher/` — app Android que abre direto o cliente e trava o
   aparelho nele (kiosk mode).
-- `world/`, `mods/` — dados do servidor (gerados automaticamente, ignorados
-  pelo git).
+- `world/`, `mods/` — dados do servidor (gerados/baixados automaticamente,
+  ignorados pelo git).
