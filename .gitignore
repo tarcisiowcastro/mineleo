@@ -1,6 +1,8 @@
 minetest.conf
 world/
-mods/
+mods/*
+!mods/mob_spawn_panel
+!mods/mob_spawn_panel/**
 *.log
 .idea/
 .vscode/

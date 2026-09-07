@@ -58,6 +58,13 @@ O servidor vem com mods de animais e barco, buscados via `scripts/install-mods.s
   painel in-game (`/privman`) com toggle pra cada privilégio (`fly`, `fast`, `noclip`,
   `teleport`...) de qualquer jogador. Exige a priv `privs`, que só quem estiver
   configurado como admin (ver seção "Administração") tem por padrão.
+- **[Unified Inventory](https://content.luanti.org/packages/RealBadAngel/unified_inventory/)** —
+  substitui o inventário criativo padrão por um com busca por nome (inclui os
+  itens do Motorboat: procure "hull" e "engine").
+- **`mob_spawn_panel`** (mod próprio deste repo, não é de terceiros) — painel
+  in-game (`/bichos`) com um botão pra cada um dos 18 animais da Animalia,
+  invocando na frente do jogador. Exige a priv `give` (mesma exigida pelo
+  `/spawnentity` nativo do Luanti), então só quem for admin usa por padrão.
 
 Pra baixar/atualizar os mods:
 
@@ -74,6 +81,8 @@ start do container) — não precisa editar `world.mt` na mão.
 - `Dockerfile` / `docker-compose.yml` — build e execução do servidor Luanti.
 - `entrypoint.sh` — ativa os mods instalados no `world.mt` e sobe o `minetestserver`.
 - `scripts/install-mods.sh` — clona/atualiza os mods de terceiros em `mods/`.
+- `mods/mob_spawn_panel/` — único mod próprio (versionado no git, ao contrário
+  dos demais em `mods/`, que são de terceiros e ignorados).
 - `minetest.example.conf` — modelo de configuração.
 - `kidlauncher/` — app Android que abre direto o cliente e trava o
   aparelho nele (kiosk mode).
