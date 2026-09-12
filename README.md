@@ -68,6 +68,9 @@ O servidor vem com mods de animais e barco, buscados via `scripts/install-mods.s
 - **[Crafting Guide Plus](https://content.luanti.org/packages/random_geek/cg_plus/)**
   (`cg_plus`) — no guia de crafting, clique num botão pra preencher a grade
   de crafting sozinho (1 unidade ou o máximo possível).
+- **`tree_thinner`** (mod próprio deste repo, não é de terceiros) — remove
+  ~60% dos troncos de árvore logo após o terreno ser gerado, deixando a
+  floresta mais rala (só afeta terreno gerado depois que o mod entrou).
 
 Pra baixar/atualizar os mods:
 

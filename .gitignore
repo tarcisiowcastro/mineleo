@@ -3,6 +3,8 @@ world/
 mods/*
 !mods/mob_spawn_panel
 !mods/mob_spawn_panel/**
+!mods/tree_thinner
+!mods/tree_thinner/**
 *.log
 .idea/
 .vscode/
