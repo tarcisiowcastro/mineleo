@@ -9,6 +9,8 @@ mods/*
 !mods/river_flow/**
 !mods/meseportals_public
 !mods/meseportals_public/**
+!mods/turbo_fly
+!mods/turbo_fly/**
 textures/
 *.log
 .idea/

@@ -96,6 +96,9 @@ O servidor vem com mods de animais e barco, buscados via `scripts/install-mods.s
   do próprio portal pra linkar dois pontos. Por padrão o mod deixa o portal
   exclusivo de quem colocou; `meseportals_public` força todos a serem
   públicos (qualquer jogador atravessa).
+- **`turbo_fly`** (mod próprio deste repo, não é de terceiros) — comando
+  `/turbo` liga/desliga velocidade extra (x2.5) só pra quem usar o comando;
+  não afeta ninguém que não digitar. Reseta sozinho a cada login.
 
 Pra baixar/atualizar os mods:
 
