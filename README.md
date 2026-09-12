@@ -65,6 +65,9 @@ O servidor vem com mods de animais e barco, buscados via `scripts/install-mods.s
   in-game (`/bichos`) com um botão pra cada um dos 18 animais da Animalia,
   invocando na frente do jogador. Exige a priv `give` (mesma exigida pelo
   `/spawnentity` nativo do Luanti), então só quem for admin usa por padrão.
+- **[Crafting Guide Plus](https://content.luanti.org/packages/random_geek/cg_plus/)**
+  (`cg_plus`) — no guia de crafting, clique num botão pra preencher a grade
+  de crafting sozinho (1 unidade ou o máximo possível).
 
 Pra baixar/atualizar os mods:
 
