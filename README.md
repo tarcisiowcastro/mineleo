@@ -109,6 +109,9 @@ O servidor vem com mods de animais e barco, buscados via `scripts/install-mods.s
   de dragão (Minor, Fire, Lightning, Poison, Water, Ice, Great, Boss), soltam
   ovo de dragão. Não são fracos (bastante HP), mas como o dano tá desligado
   no servidor isso só significa luta mais longa, não risco de verdade.
+- **[Visual Harm 1Ndicators](https://content.luanti.org/packages/Mantar/visual_harm_1ndicators/)** —
+  barra de vida (verde→vermelho) acima de qualquer mob do Mobs Redo
+  (monstros, dragões), automático, sem configurar nada.
 
 Pra baixar/atualizar os mods:
 

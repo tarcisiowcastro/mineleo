@@ -86,14 +86,16 @@ local function build_formspec(label, defs)
 	return table.concat(fs)
 end
 
-local LEASH_RADIUS = 8
-local LEASH_CHECK_INTERVAL = 3
+local LEASH_RADIUS = 10
+local LEASH_CHECK_INTERVAL = 0.5
+local LEASH_PULL_FACTOR = 0.2 -- fraction of the remaining distance per correction
 local leash_timer = 0
 
 -- Mobs Redo has no built-in "stay near spawn" option, so this keeps
--- dungeon monsters from wandering off: every few seconds, anything
--- tagged with _leash_origin that strayed past LEASH_RADIUS gets set
--- back there.
+-- dungeon monsters from wandering off. A hard teleport straight back to
+-- origin looked like a jarring snap, so instead this glides them a
+-- fraction of the way back every tick while they're past LEASH_RADIUS,
+-- which reads as being pulled back rather than popping in place.
 minetest.register_globalstep(function(dtime)
 	leash_timer = leash_timer + dtime
 	if leash_timer < LEASH_CHECK_INTERVAL then
@@ -107,7 +109,12 @@ minetest.register_globalstep(function(dtime)
 		if origin and obj then
 			local pos = obj:get_pos()
 			if pos and vector.distance(pos, origin) > LEASH_RADIUS then
-				obj:set_pos(origin)
+				local pulled = vector.new(
+					pos.x + (origin.x - pos.x) * LEASH_PULL_FACTOR,
+					pos.y + (origin.y - pos.y) * LEASH_PULL_FACTOR,
+					pos.z + (origin.z - pos.z) * LEASH_PULL_FACTOR
+				)
+				obj:set_pos(pulled)
 			end
 		end
 	end
