@@ -62,9 +62,10 @@ O servidor vem com mods de animais e barco, buscados via `scripts/install-mods.s
   substitui o inventário criativo padrão por um com busca por nome (inclui os
   itens do Motorboat: procure "hull" e "engine").
 - **`mob_spawn_panel`** (mod próprio deste repo, não é de terceiros) — painel
-  in-game (`/bichos`) com um botão pra cada um dos 18 animais da Animalia,
-  invocando na frente do jogador. Exige a priv `give` (mesma exigida pelo
-  `/spawnentity` nativo do Luanti), então só quem for admin usa por padrão.
+  in-game (`/bichos` pros 18 animais da Animalia, `/monstros` pros monstros
+  do Mobs Monster + dragões do Dmobs), invocando na frente do jogador. Exige
+  a priv `give` (mesma exigida pelo `/spawnentity` nativo do Luanti), então
+  só quem for admin usa por padrão.
 - **[Crafting Guide Plus](https://content.luanti.org/packages/random_geek/cg_plus/)**
   (`cg_plus`) — no guia de crafting, clique num botão pra preencher a grade
   de crafting sozinho (1 unidade ou o máximo possível).
