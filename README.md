@@ -90,6 +90,12 @@ O servidor vem com mods de animais e barco, buscados via `scripts/install-mods.s
   mese + aço no meio), clique direito pra nomear a estação e a rede, dá um
   soco pra atualizar a lista. Duas caixas com o mesmo nome de rede viram
   portal uma pra outra, nos dois sentidos.
+- **[Mese Portals](https://content.luanti.org/packages/mt-historical/meseportals/)**
+  (+ `meseportals_public`, mod próprio deste repo) — portal de verdade, tipo
+  Nether: atravessa a pé, sem abrir menu. Configura o nome de rede pelo GUI
+  do próprio portal pra linkar dois pontos. Por padrão o mod deixa o portal
+  exclusivo de quem colocou; `meseportals_public` força todos a serem
+  públicos (qualquer jogador atravessa).
 
 Pra baixar/atualizar os mods:
 

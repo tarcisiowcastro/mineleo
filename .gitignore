@@ -7,6 +7,8 @@ mods/*
 !mods/tree_thinner/**
 !mods/river_flow
 !mods/river_flow/**
+!mods/meseportals_public
+!mods/meseportals_public/**
 textures/
 *.log
 .idea/
