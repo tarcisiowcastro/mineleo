@@ -5,6 +5,8 @@ mods/*
 !mods/mob_spawn_panel/**
 !mods/tree_thinner
 !mods/tree_thinner/**
+!mods/river_flow
+!mods/river_flow/**
 textures/
 *.log
 .idea/

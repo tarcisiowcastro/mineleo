@@ -3,7 +3,7 @@ set -e
 
 WORLD_DIR=/luanti/world
 WORLD_MT="$WORLD_DIR/world.mt"
-MODS="creatura animalia mobkit biofuel motorboat priviledges_manager unified_inventory mob_spawn_panel cg_plus tree_thinner decor_api craft_ingredients modern edit_skin automobiles_lib automobiles_beetle automobiles_buggy automobiles_catrelle automobiles_coupe automobiles_delorean automobiles_motorcycle automobiles_roadster automobiles_trans_am automobiles_vespa"
+MODS="creatura animalia mobkit biofuel motorboat priviledges_manager unified_inventory mob_spawn_panel cg_plus tree_thinner decor_api craft_ingredients modern edit_skin automobiles_lib automobiles_beetle automobiles_buggy automobiles_catrelle automobiles_coupe automobiles_delorean automobiles_motorcycle automobiles_roadster automobiles_trans_am automobiles_vespa river_flow"
 
 mkdir -p "$WORLD_DIR"
 touch "$WORLD_MT"

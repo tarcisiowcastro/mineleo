@@ -81,6 +81,9 @@ O servidor vem com mods de animais e barco, buscados via `scripts/install-mods.s
   carros dirigíveis (Beetle, Buggy, Coupe, DeLorean, Trans Am, moto, Vespa...).
   Fixado na release 0.68e via zip (não `git clone`), porque o HEAD atual do
   repo já exige Luanti 5.12+ e este servidor roda 5.6.1.
+- **`river_flow`** (mod próprio deste repo, não é de terceiros) — aumenta o
+  alcance de propagação da água de rio de 2 pra 8 blocos (o máximo que o
+  engine permite; não existe "infinito" de verdade).
 
 Pra baixar/atualizar os mods:
 
