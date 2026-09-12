@@ -26,4 +26,11 @@ done
 mkdir -p /root/.minetest
 ln -sfn /luanti/mods /root/.minetest/mods
 
+# A texture pack folder literally named "server" gets sent to every client
+# automatically (unless they've picked their own pack locally).
+if [ -d /luanti/textures/sharpnet ]; then
+  mkdir -p /root/.minetest/textures
+  ln -sfn /luanti/textures/sharpnet /root/.minetest/textures/server
+fi
+
 exec /usr/games/minetestserver --config /luanti/minetest.conf

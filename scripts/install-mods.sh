@@ -27,5 +27,22 @@ echo "$mods" | while read -r name url; do
   fi
 done
 
+mkdir -p textures
+
+texturepacks="
+sharpnet https://github.com/Sharpik/Minetest-SharpNet-Photo-Realism-Texturespack
+"
+
+echo "$texturepacks" | while read -r name url; do
+  [ -z "$name" ] && continue
+  if [ -d "textures/$name/.git" ]; then
+    echo "== atualizando texture pack $name"
+    git -C "textures/$name" pull --ff-only
+  else
+    echo "== clonando texture pack $name"
+    git clone --depth 1 "$url" "textures/$name"
+  fi
+done
+
 echo
-echo "Mods prontos em ./mods. Rode 'docker compose up -d --build' para aplicar."
+echo "Mods e texturas prontos. Rode 'docker compose up -d --build' para aplicar."

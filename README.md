@@ -86,6 +86,17 @@ docker compose up -d --build
 Os mods são ativados automaticamente no mundo pelo `entrypoint.sh` (roda a cada
 start do container) — não precisa editar `world.mt` na mão.
 
+## Texture pack
+
+O servidor também envia um texture pack pra todo mundo que conectar (a não ser
+que o jogador já tenha escolhido um pack próprio no cliente):
+
+- **[SharpNet Photo Realism 64px](https://content.luanti.org/packages/Sharpik/sharpnet_textures/)** —
+  reskin realista do jogo base (blocos, ferramentas). Não cobre os mods
+  (Animalia, Multidecor, Unified Inventory continuam com a arte original).
+
+Baixado pelo mesmo `scripts/install-mods.sh`, em `textures/sharpnet/`.
+
 ## Estrutura
 
 - `Dockerfile` / `docker-compose.yml` — build e execução do servidor Luanti.

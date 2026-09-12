@@ -9,3 +9,4 @@ services:
       - ./minetest.conf:/luanti/minetest.conf
       - ./world:/luanti/world
       - ./mods:/luanti/mods
+      - ./textures:/luanti/textures
