@@ -99,6 +99,15 @@ O servidor vem com mods de animais e barco, buscados via `scripts/install-mods.s
 - **`turbo_fly`** (mod próprio deste repo, não é de terceiros) — comando
   `/turbo` liga/desliga velocidade extra (x2.5) só pra quem usar o comando;
   não afeta ninguém que não digitar. Reseta sozinho a cada login.
+- **[Mobs Monster](https://content.luanti.org/packages/TenPlus1/mobs_monster/)**
+  (+ **[Mobs Redo](https://content.luanti.org/packages/TenPlus1/mobs/)**) —
+  monstros clássicos com loot ao morrer (pedra, carvão, ferro, obsidiana,
+  ouro, mese, diamante): stone monster, spider, mese monster, oerkki,
+  dungeon master, tree monster, golem.
+- **[Dmobs](https://content.luanti.org/packages/TenPlus1/dmobs/)** — 8 tipos
+  de dragão (Minor, Fire, Lightning, Poison, Water, Ice, Great, Boss), soltam
+  ovo de dragão. Não são fracos (bastante HP), mas como o dano tá desligado
+  no servidor isso só significa luta mais longa, não risco de verdade.
 
 Pra baixar/atualizar os mods:
 

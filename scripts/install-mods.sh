@@ -18,6 +18,9 @@ edit_skin https://github.com/MrRar/edit_skin
 xcompat https://github.com/mt-mods/xcompat
 travelnet https://github.com/mt-mods/travelnet
 meseportals https://github.com/mt-historical/minetest-meseportals
+mobs https://codeberg.org/tenplus1/mobs_redo
+mobs_monster https://codeberg.org/tenplus1/mobs_monster
+dmobs https://codeberg.org/tenplus1/dmobs
 "
 
 echo "$mods" | while read -r name url; do
