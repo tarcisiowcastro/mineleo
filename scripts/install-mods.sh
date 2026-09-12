@@ -13,6 +13,7 @@ motorboat https://github.com/APercy/motorboat
 priviledges_manager https://github.com/JamesClarke7283/priviledges_manager
 unified_inventory https://github.com/minetest-mods/unified_inventory
 cg_plus https://github.com/random-geek/cg_plus
+multidecor https://github.com/Andrey2470T/multidecor
 "
 
 echo "$mods" | while read -r name url; do

@@ -71,6 +71,10 @@ O servidor vem com mods de animais e barco, buscados via `scripts/install-mods.s
 - **`tree_thinner`** (mod próprio deste repo, não é de terceiros) — remove
   ~60% dos troncos de árvore logo após o terreno ser gerado, deixando a
   floresta mais rala (só afeta terreno gerado depois que o mod entrou).
+- **[Multidecor](https://content.luanti.org/packages/Andrey01/multidecor/)** —
+  móveis estilo "casa de verdade" (cozinha, banheiro, quarto, sala): sofá,
+  cama, banheira, vaso sanitário, armário, luminária, etc. Modpack com 3
+  mods internos (`decor_api`, `craft_ingredients`, `modern`).
 
 Pra baixar/atualizar os mods:
 
