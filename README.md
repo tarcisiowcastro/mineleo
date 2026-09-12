@@ -75,6 +75,12 @@ O servidor vem com mods de animais e barco, buscados via `scripts/install-mods.s
   móveis estilo "casa de verdade" (cozinha, banheiro, quarto, sala): sofá,
   cama, banheira, vaso sanitário, armário, luminária, etc. Modpack com 3
   mods internos (`decor_api`, `craft_ingredients`, `modern`).
+- **[Edit Skin](https://content.luanti.org/packages/Mr.%20Rar/edit_skin/)** —
+  comando `/skin` abre uma tela pra montar a aparência do personagem.
+- **[Automobiles Pack](https://content.luanti.org/packages/apercy/automobiles_pck/)** —
+  carros dirigíveis (Beetle, Buggy, Coupe, DeLorean, Trans Am, moto, Vespa...).
+  Fixado na release 0.68e via zip (não `git clone`), porque o HEAD atual do
+  repo já exige Luanti 5.12+ e este servidor roda 5.6.1.
 
 Pra baixar/atualizar os mods:
 
