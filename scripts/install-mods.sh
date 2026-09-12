@@ -15,6 +15,8 @@ unified_inventory https://github.com/minetest-mods/unified_inventory
 cg_plus https://github.com/random-geek/cg_plus
 multidecor https://github.com/Andrey2470T/multidecor
 edit_skin https://github.com/MrRar/edit_skin
+xcompat https://github.com/mt-mods/xcompat
+travelnet https://github.com/mt-mods/travelnet
 "
 
 echo "$mods" | while read -r name url; do

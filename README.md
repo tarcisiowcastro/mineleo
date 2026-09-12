@@ -84,6 +84,12 @@ O servidor vem com mods de animais e barco, buscados via `scripts/install-mods.s
 - **`river_flow`** (mod próprio deste repo, não é de terceiros) — aumenta o
   alcance de propagação da água de rio de 2 pra 8 blocos (o máximo que o
   engine permite; não existe "infinito" de verdade).
+- **[Travelnet](https://content.luanti.org/packages/mt-mods/travelnet/)** (+
+  dependência **[xcompat](https://content.luanti.org/packages/mt-mods/xcompat/)**) —
+  portal entre dois pontos: crafta a caixa (vidro nas colunas laterais, aço +
+  mese + aço no meio), clique direito pra nomear a estação e a rede, dá um
+  soco pra atualizar a lista. Duas caixas com o mesmo nome de rede viram
+  portal uma pra outra, nos dois sentidos.
 
 Pra baixar/atualizar os mods:
 
