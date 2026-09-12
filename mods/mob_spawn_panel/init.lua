@@ -86,15 +86,49 @@ local function build_formspec(label, defs)
 	return table.concat(fs)
 end
 
-local function spawn_in_front(player, entity_name)
+local LEASH_RADIUS = 8
+local LEASH_CHECK_INTERVAL = 3
+local leash_timer = 0
+
+-- Mobs Redo has no built-in "stay near spawn" option, so this keeps
+-- dungeon monsters from wandering off: every few seconds, anything
+-- tagged with _leash_origin that strayed past LEASH_RADIUS gets set
+-- back there.
+minetest.register_globalstep(function(dtime)
+	leash_timer = leash_timer + dtime
+	if leash_timer < LEASH_CHECK_INTERVAL then
+		return
+	end
+	leash_timer = 0
+
+	for _, luaentity in pairs(minetest.luaentities) do
+		local origin = luaentity._leash_origin
+		local obj = luaentity.object
+		if origin and obj then
+			local pos = obj:get_pos()
+			if pos and vector.distance(pos, origin) > LEASH_RADIUS then
+				obj:set_pos(origin)
+			end
+		end
+	end
+end)
+
+local function spawn_in_front(player, entity_name, leashed)
 	local pos = player:get_pos()
 	local dir = minetest.yaw_to_dir(player:get_look_horizontal())
 	pos = vector.add(pos, vector.multiply(dir, 2))
 	pos.y = pos.y + 0.5
-	minetest.add_entity(pos, entity_name)
+
+	local obj = minetest.add_entity(pos, entity_name)
+	if leashed and obj then
+		local luaentity = obj:get_luaentity()
+		if luaentity then
+			luaentity._leash_origin = vector.copy(pos)
+		end
+	end
 end
 
-local function register_spawn_panel(command, description, label, defs)
+local function register_spawn_panel(command, description, label, defs, leashed)
 	local formname = "mob_spawn_panel:" .. command
 	local formspec = build_formspec(label, defs)
 
@@ -121,7 +155,7 @@ local function register_spawn_panel(command, description, label, defs)
 			if index then
 				local def = defs[tonumber(index)]
 				if def then
-					spawn_in_front(player, def[1])
+					spawn_in_front(player, def[1], leashed)
 					minetest.chat_send_player(player_name, "Invocado: " .. def[2])
 				end
 				break
@@ -130,5 +164,5 @@ local function register_spawn_panel(command, description, label, defs)
 	end)
 end
 
-register_spawn_panel("bichos", "Abre o painel pra invocar animais da Animalia", "Invocar bicho (Animalia)", animal_defs)
-register_spawn_panel("monstros", "Abre o painel pra invocar monstros e dragoes (dungeon)", "Invocar monstro/dragao", monster_defs)
+register_spawn_panel("bichos", "Abre o painel pra invocar animais da Animalia", "Invocar bicho (Animalia)", animal_defs, false)
+register_spawn_panel("monstros", "Abre o painel pra invocar monstros e dragoes (dungeon)", "Invocar monstro/dragao", monster_defs, true)
