@@ -22,6 +22,7 @@ mobs https://codeberg.org/tenplus1/mobs_redo
 mobs_monster https://codeberg.org/tenplus1/mobs_monster
 dmobs https://codeberg.org/tenplus1/dmobs
 visual_harm_1ndicators https://codeberg.org/Mantar/vis_harm_1nd
+worldedit https://github.com/Uberi/Minetest-WorldEdit
 "
 
 echo "$mods" | while read -r name url; do

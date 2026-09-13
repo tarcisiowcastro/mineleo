@@ -112,6 +112,20 @@ O servidor vem com mods de animais e barco, buscados via `scripts/install-mods.s
 - **[Visual Harm 1Ndicators](https://content.luanti.org/packages/Mantar/visual_harm_1ndicators/)** —
   barra de vida (verde→vermelho) acima de qualquer mob do Mobs Redo
   (monstros, dragões), automático, sem configurar nada.
+- **[WorldEdit](https://content.luanti.org/packages/sfan5/worldedit/)** —
+  ferramenta de terraformar em massa via comando `//`. Não tem um comando
+  "flatten" pronto, mas dá pra achatar uma área inteira em duas passadas:
+  1. Marca dois cantos da área, um bem embaixo e outro bem em cima (acima de
+     qualquer morro): `//pos1` (no canto A, no fundo) e `//pos2` (no canto B,
+     no alto), depois `//set air` — limpa tudo (morro, árvore) naquele volume.
+  2. Marca de novo do fundo até a altura que você quer de chão:
+     `//pos1`/`//pos2` nessa faixa mais baixa, depois `//set dirt_with_grass`
+     (ou outro bloco) — preenche o chão sólido nessa altura.
+  Exige a priv `worldedit`; se `//pos1` der "sem permissão", concede pelo
+  `/privman`. **Cuidado com o tamanho**: 300x300 com bastante altura passa
+  fácil de milhões de blocos num `//set` só, o que trava o servidor por um
+  tempo — recomendo fazer em pedaços menores (tipo 100x100) em vez de tudo
+  de uma vez.
 
 Pra baixar/atualizar os mods:
 
