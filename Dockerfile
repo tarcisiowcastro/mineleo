@@ -10,7 +10,7 @@ WORKDIR /luanti
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-VOLUME ["/luanti/world", "/luanti/mods", "/luanti/textures"]
+VOLUME ["/luanti/world", "/luanti/mods"]
 EXPOSE 30000/udp
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

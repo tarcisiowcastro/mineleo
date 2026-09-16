@@ -51,16 +51,12 @@ O servidor vem com mods de animais e barco, buscados via `scripts/install-mods.s
 - **[Animalia](https://content.luanti.org/packages/ElCeejo/animalia/)** (+ dependência
   **[Creatura](https://content.luanti.org/packages/ElCeejo/creatura/)**) — animais com
   comportamento (cavalo montável, lobo/gato/raposa domesticáveis, reprodução).
-- **[Motorboat](https://content.luanti.org/packages/apercy/motorboat/)** (+ dependências
-  **[mobkit](https://content.luanti.org/packages/mt-mods/mobkit/)** e
-  **[biofuel](https://content.luanti.org/packages/Lokrates/biofuel/)**) — barco a motor.
 - **[Privileges Manager](https://content.luanti.org/packages/Impulse/priviledges_manager/)** —
   painel in-game (`/privman`) com toggle pra cada privilégio (`fly`, `fast`, `noclip`,
   `teleport`...) de qualquer jogador. Exige a priv `privs`, que só quem estiver
   configurado como admin (ver seção "Administração") tem por padrão.
 - **[Unified Inventory](https://content.luanti.org/packages/RealBadAngel/unified_inventory/)** —
-  substitui o inventário criativo padrão por um com busca por nome (inclui os
-  itens do Motorboat: procure "hull" e "engine").
+  substitui o inventário criativo padrão por um com busca por nome.
 - **`mob_spawn_panel`** (mod próprio deste repo, não é de terceiros) — painel
   in-game (`/bichos` pros 18 animais da Animalia, `/monstros` pros monstros
   do Mobs Monster + dragões do Dmobs), invocando na frente do jogador. Exige
@@ -91,12 +87,6 @@ O servidor vem com mods de animais e barco, buscados via `scripts/install-mods.s
   mese + aço no meio), clique direito pra nomear a estação e a rede, dá um
   soco pra atualizar a lista. Duas caixas com o mesmo nome de rede viram
   portal uma pra outra, nos dois sentidos.
-- **[Mese Portals](https://content.luanti.org/packages/mt-historical/meseportals/)**
-  (+ `meseportals_public`, mod próprio deste repo) — portal de verdade, tipo
-  Nether: atravessa a pé, sem abrir menu. Configura o nome de rede pelo GUI
-  do próprio portal pra linkar dois pontos. Por padrão o mod deixa o portal
-  exclusivo de quem colocou; `meseportals_public` força todos a serem
-  públicos (qualquer jogador atravessa).
 - **`turbo_fly`** (mod próprio deste repo, não é de terceiros) — comando
   `/turbo` liga/desliga velocidade extra (x2.5) só pra quem usar o comando;
   não afeta ninguém que não digitar. Reseta sozinho a cada login.
@@ -137,24 +127,14 @@ docker compose up -d --build
 Os mods são ativados automaticamente no mundo pelo `entrypoint.sh` (roda a cada
 start do container) — não precisa editar `world.mt` na mão.
 
-## Texture pack
-
-O servidor também envia um texture pack pra todo mundo que conectar (a não ser
-que o jogador já tenha escolhido um pack próprio no cliente):
-
-- **[SharpNet Photo Realism 64px](https://content.luanti.org/packages/Sharpik/sharpnet_textures/)** —
-  reskin realista do jogo base (blocos, ferramentas). Não cobre os mods
-  (Animalia, Multidecor, Unified Inventory continuam com a arte original).
-
-Baixado pelo mesmo `scripts/install-mods.sh`, em `textures/sharpnet/`.
-
 ## Estrutura
 
 - `Dockerfile` / `docker-compose.yml` — build e execução do servidor Luanti.
 - `entrypoint.sh` — ativa os mods instalados no `world.mt` e sobe o `minetestserver`.
 - `scripts/install-mods.sh` — clona/atualiza os mods de terceiros em `mods/`.
-- `mods/mob_spawn_panel/` — único mod próprio (versionado no git, ao contrário
-  dos demais em `mods/`, que são de terceiros e ignorados).
+- `mods/mob_spawn_panel/`, `mods/tree_thinner/`, `mods/river_flow/`,
+  `mods/turbo_fly/` — mods próprios (versionados no git, ao contrário dos
+  demais em `mods/`, que são de terceiros e ignorados).
 - `minetest.example.conf` — modelo de configuração.
 - `kidlauncher/` — app Android que abre direto o cliente e trava o
   aparelho nele (kiosk mode).

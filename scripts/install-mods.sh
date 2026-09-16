@@ -7,9 +7,7 @@ mkdir -p mods
 mods="
 creatura https://github.com/ElCeejo/creatura
 animalia https://github.com/ElCeejo/animalia
-mobkit https://github.com/mt-mods/mobkit
 biofuel https://github.com/Lokrates/Biofuel
-motorboat https://github.com/APercy/motorboat
 priviledges_manager https://github.com/JamesClarke7283/priviledges_manager
 unified_inventory https://github.com/minetest-mods/unified_inventory
 cg_plus https://github.com/random-geek/cg_plus
@@ -17,7 +15,6 @@ multidecor https://github.com/Andrey2470T/multidecor
 edit_skin https://github.com/MrRar/edit_skin
 xcompat https://github.com/mt-mods/xcompat
 travelnet https://github.com/mt-mods/travelnet
-meseportals https://github.com/mt-historical/minetest-meseportals
 mobs https://codeberg.org/tenplus1/mobs_redo
 mobs_monster https://codeberg.org/tenplus1/mobs_monster
 dmobs https://codeberg.org/tenplus1/dmobs
@@ -50,22 +47,5 @@ else
   echo "== automobiles_pck ja presente (pinado, nao atualiza sozinho)"
 fi
 
-mkdir -p textures
-
-texturepacks="
-sharpnet https://github.com/Sharpik/Minetest-SharpNet-Photo-Realism-Texturespack
-"
-
-echo "$texturepacks" | while read -r name url; do
-  [ -z "$name" ] && continue
-  if [ -d "textures/$name/.git" ]; then
-    echo "== atualizando texture pack $name"
-    git -C "textures/$name" pull --ff-only
-  else
-    echo "== clonando texture pack $name"
-    git clone --depth 1 "$url" "textures/$name"
-  fi
-done
-
 echo
-echo "Mods e texturas prontos. Rode 'docker compose up -d --build' para aplicar."
+echo "Mods prontos em ./mods. Rode 'docker compose up -d --build' para aplicar."

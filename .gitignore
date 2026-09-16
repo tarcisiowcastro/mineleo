@@ -7,12 +7,22 @@ mods/*
 !mods/tree_thinner/**
 !mods/river_flow
 !mods/river_flow/**
-!mods/meseportals_public
-!mods/meseportals_public/**
 !mods/turbo_fly
 !mods/turbo_fly/**
-textures/
 *.log
 .idea/
 .vscode/
 bin/
+
+# BEGIN WRLC
+.claude/settings.local.json
+.cursor/skills/wrlc*
+.cursor/rules/wrlc-*.mdc
+.claude/skills/wrlc*
+.opencode/agents/wrlc-*
+.evercode/agents/wrlc-*
+.wrlc/kit-injected-version
+.cursor/mcp.json
+evercode.json
+opencode.json
+# END WRLC

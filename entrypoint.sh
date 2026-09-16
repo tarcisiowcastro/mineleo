@@ -3,7 +3,7 @@ set -e
 
 WORLD_DIR=/luanti/world
 WORLD_MT="$WORLD_DIR/world.mt"
-MODS="creatura animalia mobkit biofuel motorboat priviledges_manager unified_inventory mob_spawn_panel cg_plus tree_thinner decor_api craft_ingredients modern edit_skin automobiles_lib automobiles_beetle automobiles_buggy automobiles_catrelle automobiles_coupe automobiles_delorean automobiles_motorcycle automobiles_roadster automobiles_trans_am automobiles_vespa river_flow xcompat travelnet meseportals meseportals_public turbo_fly mobs mobs_monster dmobs visual_harm_1ndicators worldedit worldedit_commands worldedit_gui worldedit_shortcommands worldedit_brush"
+MODS="creatura animalia biofuel priviledges_manager unified_inventory mob_spawn_panel cg_plus tree_thinner decor_api craft_ingredients modern edit_skin automobiles_lib automobiles_beetle automobiles_buggy automobiles_catrelle automobiles_coupe automobiles_delorean automobiles_motorcycle automobiles_roadster automobiles_trans_am automobiles_vespa river_flow xcompat travelnet turbo_fly mobs mobs_monster dmobs visual_harm_1ndicators worldedit worldedit_commands worldedit_gui worldedit_shortcommands worldedit_brush"
 
 mkdir -p "$WORLD_DIR"
 touch "$WORLD_MT"
@@ -25,12 +25,5 @@ done
 # flag to point it at another path, so link our bind-mounted /luanti/mods in.
 mkdir -p /root/.minetest
 ln -sfn /luanti/mods /root/.minetest/mods
-
-# A texture pack folder literally named "server" gets sent to every client
-# automatically (unless they've picked their own pack locally).
-if [ -d /luanti/textures/sharpnet ]; then
-  mkdir -p /root/.minetest/textures
-  ln -sfn /luanti/textures/sharpnet /root/.minetest/textures/server
-fi
 
 exec /usr/games/minetestserver --config /luanti/minetest.conf
