@@ -116,6 +116,13 @@ O servidor vem com mods de animais e barco, buscados via `scripts/install-mods.s
   fácil de milhões de blocos num `//set` só, o que trava o servidor por um
   tempo — recomendo fazer em pedaços menores (tipo 100x100) em vez de tudo
   de uma vez.
+- **[Steampunk Blimp](https://content.luanti.org/packages/apercy/steampunk_blimp/)**
+  (+ **[AirUtils](https://content.luanti.org/packages/apercy/airutils/)**) —
+  dirigível a vapor, carrega até 7 pessoas. Combustível (carvão/madeira) +
+  água na caldeira; suba com `Espaço`, desça segurando `Shift`, acelera
+  andando pra frente. Fixado na release 0.47 via zip (não `git clone`),
+  porque o HEAD atual do repo já exige Luanti 5.9+ e este servidor roda
+  5.6.1.
 
 Pra baixar/atualizar os mods:
 

@@ -20,6 +20,7 @@ mobs_monster https://codeberg.org/tenplus1/mobs_monster
 dmobs https://codeberg.org/tenplus1/dmobs
 visual_harm_1ndicators https://codeberg.org/Mantar/vis_harm_1nd
 worldedit https://github.com/Uberi/Minetest-WorldEdit
+airutils https://github.com/APercy/airutils
 "
 
 echo "$mods" | while read -r name url; do
@@ -45,6 +46,19 @@ if [ ! -d "mods/automobiles_pck" ]; then
   rm -f /tmp/automobiles_pck.zip
 else
   echo "== automobiles_pck ja presente (pinado, nao atualiza sozinho)"
+fi
+
+# Same story as automobiles_pck: steampunk_blimp's git HEAD requires Luanti
+# 5.9+ now. Pinned to release 0.47 (ContentDB release id 30012), the newest
+# one still declaring Luanti 5.4+ support.
+if [ ! -d "mods/steampunk_blimp" ]; then
+  echo "== baixando steampunk_blimp (release 0.47, pinned p/ Luanti 5.4+)"
+  curl -sL -o /tmp/steampunk_blimp.zip \
+    "https://content.luanti.org/packages/apercy/steampunk_blimp/releases/30012/download/"
+  unzip -q -o /tmp/steampunk_blimp.zip -d mods/
+  rm -f /tmp/steampunk_blimp.zip
+else
+  echo "== steampunk_blimp ja presente (pinado, nao atualiza sozinho)"
 fi
 
 echo
