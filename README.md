@@ -123,6 +123,23 @@ O servidor vem com mods de animais e barco, buscados via `scripts/install-mods.s
   andando pra frente. Fixado na release 0.47 via zip (não `git clone`),
   porque o HEAD atual do repo já exige Luanti 5.9+ e este servidor roda
   5.6.1.
+- **[WW1 Planes](https://content.luanti.org/packages/apercy/ww1_planes/)**
+  (+ AirUtils) — dois aviões pilotáveis (Albatros D5, Sopwith F1 Camel).
+- **[Discovery Maps](https://content.luanti.org/packages/TomCon/discovery_maps/)** —
+  mapa em tela cheia com névoa de guerra (só mostra onde já foi explorado),
+  marcadores e waypoints.
+- **[Elevator](https://content.luanti.org/packages/shacknetisp/elevator/)** —
+  elevador de verdade (sobe/desce visível, não é teleporte instantâneo).
+- **[Advtrains](https://content.luanti.org/packages/orwell/advtrains/)** +
+  **[Advtrains Freight Train](https://content.luanti.org/packages/advtrains_supplemental/advtrains_freight_train/)** —
+  trilhos + 4 vagões de carga (dobro de espaço, mais lentos) e uma
+  locomotiva a diesel. Só o essencial pra ter trem funcionando (trilho +
+  vagão); os pacotes de sinalização/automação do Advtrains ficaram de fora
+  por enquanto — dá pra adicionar depois se quiser.
+
+⚠️ **Não instalado**: o mod `mg` (mapgen experimental do Nore) tem aviso do
+próprio autor pra não usar em mundo já existente — como o nosso já tem muita
+coisa construída, pular esse foi o mais seguro.
 
 Pra baixar/atualizar os mods:
 

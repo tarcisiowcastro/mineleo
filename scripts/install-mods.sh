@@ -21,6 +21,11 @@ dmobs https://codeberg.org/tenplus1/dmobs
 visual_harm_1ndicators https://codeberg.org/Mantar/vis_harm_1nd
 worldedit https://github.com/Uberi/Minetest-WorldEdit
 airutils https://github.com/APercy/airutils
+ww1_planes https://github.com/APercy/ww1_planes
+discovery_maps https://codeberg.org/TomCon/discovery_maps
+elevator https://github.com/tigris-mt/elevator
+advtrains https://git.bananach.space/advtrains.git
+advtrains_freight_train https://codeberg.org/advtrains_supplemental/advtrains_freight_train
 "
 
 echo "$mods" | while read -r name url; do
