@@ -125,6 +125,9 @@ O servidor vem com mods de animais e barco, buscados via `scripts/install-mods.s
   5.6.1.
 - **[WW1 Planes](https://content.luanti.org/packages/apercy/ww1_planes/)**
   (+ AirUtils) — dois aviões pilotáveis (Albatros D5, Sopwith F1 Camel).
+  **`math_isfinite_polyfill`** (mod próprio deste repo) corrige um crash
+  real do AirUtils (`math.isfinite` não existe no Lua do Minetest) que
+  travava o servidor em loop toda vez que um avião existia no mundo.
 - **[Discovery Maps](https://content.luanti.org/packages/TomCon/discovery_maps/)** —
   mapa em tela cheia com névoa de guerra (só mostra onde já foi explorado),
   marcadores e waypoints.
