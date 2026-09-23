@@ -160,6 +160,17 @@ O servidor vem com mods de animais e barco, buscados via `scripts/install-mods.s
   subir pra VPS; se der problema em produção, `rm -rf mods/working_villages
   mods/areas` e remover as linhas correspondentes de `world.mt` reverte sem
   afetar os demais mods.
+- **[Villages (mg_villages)](https://content.luanti.org/packages/Sokomine/mg_villages/)**
+  (+ dependência **[handle_schematics](https://github.com/Sokomine/handle_schematics)**) —
+  gera vilas de verdade (casas, ruas) no terreno, complementando o Working
+  Villages (que só dá os NPCs que andam pelo mapa, sem construir nada).
+  Comandos in-game: `/villages` lista as vilas já geradas nesta sessão,
+  `/visit <número>` teleporta direto pra uma delas.
+  ⚠️ **Só gera vila em terreno ainda não explorado** — o mod decide na hora
+  em que o chunk é gerado pela primeira vez, então a área que já foi
+  visitada/construída no mineleo não ganha vila retroativamente. Pra ver
+  uma, é preciso ir (voar) pra fora da área já mapeada; dali em diante,
+  qualquer terreno novo tem chance de ter uma.
 
 ⚠️ **Não instalado**: o mod `mg` (mapgen experimental do Nore) tem aviso do
 próprio autor pra não usar em mundo já existente — como o nosso já tem muita

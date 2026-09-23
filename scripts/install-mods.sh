@@ -34,6 +34,8 @@ advtrains https://git.bananach.space/advtrains.git
 advtrains_freight_train https://codeberg.org/advtrains_supplemental/advtrains_freight_train
 working_villages https://github.com/theFox6/working_villages
 areas https://github.com/minetest-mods/areas
+handle_schematics https://github.com/Sokomine/handle_schematics
+mg_villages https://github.com/Sokomine/mg_villages
 "
 
 echo "$mods" | while read -r name url; do
