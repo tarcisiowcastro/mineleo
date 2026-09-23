@@ -171,6 +171,21 @@ O servidor vem com mods de animais e barco, buscados via `scripts/install-mods.s
   visitada/construída no mineleo não ganha vila retroativamente. Pra ver
   uma, é preciso ir (voar) pra fora da área já mapeada; dali em diante,
   qualquer terreno novo tem chance de ter uma.
+- **`village_populate`** (mod próprio deste repo, não é de terceiros) — o
+  mg_villages já calcula nome, cama e ocupação de cada morador de cada casa
+  gerada, mas nunca materializa isso num NPC visível (ele exige um mod de
+  integração "mob_world_interaction" que não existe compatível com os mobs
+  que já rodamos aqui). Esse mod lê os mesmos dados e spawna um NPC do
+  Working Villages em cada cama, com o nome/título do morador como nametag.
+  Roda sozinho: uma passada ~30s depois do servidor subir (pega as vilas que
+  já existiam antes desse mod) e depois a cada 5 minutos (pega vila nova
+  conforme o mg_villages gera). Idempotente — não duplica morador numa vila
+  já povoada, mesmo reiniciando o servidor. Comando manual pra forçar uma
+  passada na hora: `/povoar_vilas` (priv `server`).
+- **[Mobs Animal](https://codeberg.org/tenplus1/mobs_animal)** — animais de
+  fazenda (vaca, ovelha, galinha, coelho, gato) usando o mesmo motor Mobs
+  Redo do Mobs Monster/Dmobs já instalados aqui; spawna sozinho pelo mapa
+  todo, sem precisar de vila.
 
 ⚠️ **Não instalado**: o mod `mg` (mapgen experimental do Nore) tem aviso do
 próprio autor pra não usar em mundo já existente — como o nosso já tem muita

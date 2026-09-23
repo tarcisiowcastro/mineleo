@@ -11,6 +11,8 @@ mods/*
 !mods/turbo_fly/**
 !mods/math_isfinite_polyfill
 !mods/math_isfinite_polyfill/**
+!mods/village_populate
+!mods/village_populate/**
 *.log
 .idea/
 .vscode/
