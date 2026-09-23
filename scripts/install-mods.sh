@@ -4,6 +4,12 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 mkdir -p mods
 
+# working_villages: manutenção listada como "desconhecida" na ContentDB e há
+# reviews de crash (lenhador cortando árvore, placa de construção) e de bugs
+# que pioram combinados com outros mods de mob — aqui já rodamos
+# creatura/animalia/dmobs/mobs_monster. Teste num mundo local antes de subir
+# pra VPS; se travar o servidor, `rm -rf mods/working_villages` e remover a
+# linha do world.mt resolve sem afetar os demais mods.
 mods="
 creatura https://github.com/ElCeejo/creatura
 animalia https://github.com/ElCeejo/animalia
@@ -26,16 +32,31 @@ discovery_maps https://codeberg.org/TomCon/discovery_maps
 elevator https://github.com/tigris-mt/elevator
 advtrains https://git.bananach.space/advtrains.git
 advtrains_freight_train https://codeberg.org/advtrains_supplemental/advtrains_freight_train
+working_villages https://github.com/theFox6/working_villages
+areas https://github.com/minetest-mods/areas
 "
 
 echo "$mods" | while read -r name url; do
   [ -z "$name" ] && continue
+  # timeout evita que um host lento/instável (ex: git.bananach.space do
+  # advtrains) trave o script inteiro pra sempre; "|| true" deixa seguir
+  # pros próximos mods em vez de abortar tudo por causa de um só.
   if [ -d "mods/$name/.git" ]; then
     echo "== atualizando $name"
-    git -C "mods/$name" pull --ff-only
+    timeout 60 git -C "mods/$name" pull --ff-only \
+      || echo "!! $name: pull falhou ou expirou, mantendo versão local"
+    [ "$name" = "working_villages" ] && timeout 60 git -C "mods/$name" submodule update --init --recursive
+  elif [ "$name" = "working_villages" ]; then
+    # traz o modutil embutido como submodule (working_villagers/modutil);
+    # sem --recursive o mod cai no fallback portable.lua, mas o submodule
+    # é a versão que o autor mantém de fato.
+    echo "== clonando $name (com submodules)"
+    timeout 120 git clone --depth 1 --recursive "$url" "mods/$name" \
+      || echo "!! $name: clone falhou ou expirou"
   else
     echo "== clonando $name"
-    git clone --depth 1 "$url" "mods/$name"
+    timeout 60 git clone --depth 1 "$url" "mods/$name" \
+      || echo "!! $name: clone falhou ou expirou"
   fi
 done
 

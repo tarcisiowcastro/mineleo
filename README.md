@@ -140,6 +140,27 @@ O servidor vem com mods de animais e barco, buscados via `scripts/install-mods.s
   vagão); os pacotes de sinalização/automação do Advtrains ficaram de fora
   por enquanto — dá pra adicionar depois se quiser.
 
+- **[Working Villages](https://content.luanti.org/packages/theFox/working_villages/)** —
+  NPCs que moram no mundo e trabalham sozinhos (fazenda, lenhador,
+  construção), com rotina que muda ao longo do dia. Modpack com
+  `working_villagers` (o mod em si, já traz `modutil` embutido como
+  submodule) e `building_sign` (proteção de área + placas de construção,
+  descrito pelo próprio autor como "inacabado").
+  Depende só de `default` (parte do Minetest Game, já vem no pacote
+  `minetest-server` da imagem base). Opcionais pra funcionalidade completa:
+  `doors` e `beds` (também vêm no Minetest Game — não precisou instalar à
+  parte) e **[Areas](https://github.com/minetest-mods/areas)** (`areas`,
+  instalado à parte via `install-mods.sh`) — sem `areas`, o `building_sign`
+  perde a parte de proteção de território, mas os NPCs de trabalho
+  continuam funcionando normalmente.
+  ⚠️ **Manutenção listada como "desconhecida"** na ContentDB e há reviews de
+  crash (lenhador cortando árvore, placa de construção) e de bugs que
+  pioram combinados com outros mods de mob — aqui já rodamos
+  creatura/animalia/dmobs/mobs_monster. Testado num mundo local antes de
+  subir pra VPS; se der problema em produção, `rm -rf mods/working_villages
+  mods/areas` e remover as linhas correspondentes de `world.mt` reverte sem
+  afetar os demais mods.
+
 ⚠️ **Não instalado**: o mod `mg` (mapgen experimental do Nore) tem aviso do
 próprio autor pra não usar em mundo já existente — como o nosso já tem muita
 coisa construída, pular esse foi o mais seguro.
