@@ -13,6 +13,8 @@ mods/*
 !mods/math_isfinite_polyfill/**
 !mods/village_populate
 !mods/village_populate/**
+!mods/no_lava
+!mods/no_lava/**
 *.log
 .idea/
 .vscode/

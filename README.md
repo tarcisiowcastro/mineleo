@@ -186,6 +186,13 @@ O servidor vem com mods de animais e barco, buscados via `scripts/install-mods.s
   fazenda (vaca, ovelha, galinha, coelho, gato) usando o mesmo motor Mobs
   Redo do Mobs Monster/Dmobs já instalados aqui; spawna sozinho pelo mapa
   todo, sem precisar de vila.
+- **`no_lava`** (mod próprio deste repo, não é de terceiros) — remove toda
+  a lava do servidor: terreno novo já nasce sem lava (apagada logo depois
+  de gerado), a lava que já existia no mundo some sozinha na hora em que
+  aquele trecho carrega (quando alguém chega perto), e qualquer lava
+  colocada depois (balde, WorldEdit, `/setnode`) se desfaz na hora. O balde
+  de lava também sai do inventário criativo. Onde tinha lava vira ar
+  (buraco/caverna vazia).
 
 ⚠️ **Não instalado**: o mod `mg` (mapgen experimental do Nore) tem aviso do
 próprio autor pra não usar em mundo já existente — como o nosso já tem muita
@@ -207,7 +214,7 @@ start do container) — não precisa editar `world.mt` na mão.
 - `entrypoint.sh` — ativa os mods instalados no `world.mt` e sobe o `minetestserver`.
 - `scripts/install-mods.sh` — clona/atualiza os mods de terceiros em `mods/`.
 - `mods/mob_spawn_panel/`, `mods/tree_thinner/`, `mods/river_flow/`,
-  `mods/turbo_fly/` — mods próprios (versionados no git, ao contrário dos
+  `mods/turbo_fly/`, `mods/no_lava/` — mods próprios (versionados no git, ao contrário dos
   demais em `mods/`, que são de terceiros e ignorados).
 - `minetest.example.conf` — modelo de configuração.
 - `kidlauncher/` — app Android que abre direto o cliente e trava o
