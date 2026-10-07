@@ -24,7 +24,7 @@ core.register_abm({
 	action = clean,
 })
 
--- /limpar_lava [raio]: limpa a lava ao redor de quem digitou (padrao 80, max 200)
+-- /limpar_lava [raio]: limpa a lava ao redor de quem digitou (padrao 40, max 60)
 core.register_chatcommand("limpar_lava", {
 	params = "[raio]",
 	description = "Remove toda a lava ao redor de voce",
@@ -34,7 +34,8 @@ core.register_chatcommand("limpar_lava", {
 		if not player then
 			return false, "Jogador nao encontrado"
 		end
-		local r = math.min(tonumber(param) or 80, 200)
+		-- find_nodes_in_area rejeita areas > 4096000 nos; 120^3 cabe com folga
+		local r = math.max(1, math.min(tonumber(param) or 40, 60))
 		local p = vector.round(player:get_pos())
 		local minp = vector.subtract(p, r)
 		local maxp = vector.add(p, r)
