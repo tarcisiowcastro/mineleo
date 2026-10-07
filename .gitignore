@@ -13,6 +13,10 @@ mods/*
 !mods/math_isfinite_polyfill/**
 !mods/village_populate
 !mods/village_populate/**
+!mods/no_lava
+!mods/no_lava/**
+!mods/pickaxe_only
+!mods/pickaxe_only/**
 *.log
 .idea/
 .vscode/
@@ -20,13 +24,23 @@ bin/
 
 # BEGIN WRLC
 .claude/settings.local.json
+.claude/hooks/z-cortex-shell-guard.mjs
+.claude/hooks/wrlc-shell-guard.mjs
+.opencode/plugins/z-cortex-shell-guard.js
+.opencode/plugins/wrlc-shell-guard.js
+.cursor/skills/z-cortex*
 .cursor/skills/wrlc*
+.cursor/rules/z-cortex-*.mdc
 .cursor/rules/wrlc-*.mdc
+.cursor/hooks/z-cortex-shell-guard.mjs
+.cursor/hooks/wrlc-shell-guard.mjs
+.claude/skills/z-cortex*
 .claude/skills/wrlc*
+.claude/agents/z-cortex*
+.opencode/skills/z-cortex*
+.opencode/agents/z-cortex*
 .opencode/agents/wrlc-*
+.evercode/agents/z-cortex*
 .evercode/agents/wrlc-*
 .wrlc/kit-injected-version
-.cursor/mcp.json
-evercode.json
-opencode.json
 # END WRLC
