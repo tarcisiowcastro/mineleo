@@ -1,11 +1,19 @@
 -- Remove toda a lava do mundo (superficie e cavernas).
-local lava_nodes = { "group:lava" }
+-- Inclui a lava "domada" do mg_villages (grupo lava_tamed, sem grupo lava).
+local lava_nodes = { "group:lava", "group:lava_tamed" }
+
+-- Qualquer liquido com "lava" no nome tambem entra (dos mods ja carregados,
+-- ver optional_depends no mod.conf)
+for name, def in pairs(core.registered_nodes) do
+	if def.liquidtype and def.liquidtype ~= "none" and name:find("lava", 1, true) then
+		lava_nodes[#lava_nodes + 1] = name
+	end
+end
 
 local function clean(pos)
 	core.set_node(pos, { name = "air" })
 end
 
--- Mapblocks que carregam (existentes ou recem gerados)
 core.register_lbm({
 	label = "Remove lava",
 	name = "no_lava:remove_all",
@@ -14,7 +22,6 @@ core.register_lbm({
 	action = clean,
 })
 
--- Lava colocada depois (balde, mods) ou que escorreu
 core.register_abm({
 	label = "Remove lava (ABM)",
 	nodenames = lava_nodes,
