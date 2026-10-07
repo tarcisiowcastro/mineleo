@@ -19,6 +19,8 @@ mods/*
 !mods/pickaxe_only/**
 !mods/always_day
 !mods/always_day/**
+!mods/trilho_cmd
+!mods/trilho_cmd/**
 *.log
 .idea/
 .vscode/
