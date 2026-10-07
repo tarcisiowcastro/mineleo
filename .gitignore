@@ -17,6 +17,8 @@ mods/*
 !mods/no_lava/**
 !mods/pickaxe_only
 !mods/pickaxe_only/**
+!mods/always_day
+!mods/always_day/**
 *.log
 .idea/
 .vscode/
