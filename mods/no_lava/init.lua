@@ -1,36 +1,53 @@
--- Remove so a lava "de fora" (superficie); lava em cavernas fica.
+-- Remove toda a lava do mundo (superficie e cavernas).
 local lava_nodes = { "group:lava" }
 
-local function outside(pos)
-	-- acima do nivel do mar, ou com ceu aberto (luz do dia no no acima)
-	if pos.y >= 0 then
-		return true
-	end
-	local above = { x = pos.x, y = pos.y + 1, z = pos.z }
-	local light = core.get_node_light(above, 0.5)
-	return light ~= nil and light >= core.LIGHT_MAX
-end
-
 local function clean(pos)
-	if outside(pos) then
-		core.set_node(pos, { name = "air" })
-	end
+	core.set_node(pos, { name = "air" })
 end
 
+-- Mapblocks que carregam (existentes ou recem gerados)
 core.register_lbm({
-	label = "Remove surface lava",
-	name = "no_lava:remove_surface",
+	label = "Remove lava",
+	name = "no_lava:remove_all",
 	nodenames = lava_nodes,
 	run_at_every_load = true,
 	action = clean,
 })
 
--- Lava colocada depois (balde, mods) ou que escorreu pra fora
+-- Lava colocada depois (balde, mods) ou que escorreu
 core.register_abm({
-	label = "Remove surface lava (ABM)",
+	label = "Remove lava (ABM)",
 	nodenames = lava_nodes,
-	interval = 2,
+	interval = 1,
 	chance = 1,
 	catch_up = false,
 	action = clean,
+})
+
+-- /limpar_lava [raio]: limpa a lava ao redor de quem digitou (padrao 80, max 200)
+core.register_chatcommand("limpar_lava", {
+	params = "[raio]",
+	description = "Remove toda a lava ao redor de voce",
+	privs = { server = true },
+	func = function(name, param)
+		local player = core.get_player_by_name(name)
+		if not player then
+			return false, "Jogador nao encontrado"
+		end
+		local r = math.min(tonumber(param) or 80, 200)
+		local p = vector.round(player:get_pos())
+		local minp = vector.subtract(p, r)
+		local maxp = vector.add(p, r)
+		core.emerge_area(minp, maxp, function(_, _, remaining)
+			if remaining > 0 then
+				return
+			end
+			local found = core.find_nodes_in_area(minp, maxp, lava_nodes)
+			for _, pos in ipairs(found) do
+				core.set_node(pos, { name = "air" })
+			end
+			core.chat_send_player(name, ("Lava removida: %d blocos"):format(#found))
+		end)
+		return true, "Limpando lava num raio de " .. r .. "..."
+	end,
 })
