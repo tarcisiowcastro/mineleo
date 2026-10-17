@@ -117,9 +117,64 @@ core.register_chatcommand("cavar", {
 	end,
 })
 
--- /desfazer: volta a ultima acao de /trilho ou /cavar (ate MAX_UNDO por jogador)
+-- Itens que nao sao bloco mas colocam um bloco (ex.: trilho do advtrains)
+local PLACER_TO_NODE = {
+	["advtrains:dtrack_placer"] = RAIL,
+}
+
+-- /replicar <quantidade>: repete o bloco da mao numa reta pra frente,
+-- substituindo o que estiver no caminho (o item da mao nao e consumido)
+core.register_chatcommand("replicar", {
+	params = "<quantidade>",
+	description = "Coloca o bloco da sua mao numa linha reta na direcao em que voce olha, substituindo o que estiver no caminho",
+	privs = { server = true },
+	func = function(name, param)
+		local player = core.get_player_by_name(name)
+		if not player then
+			return false, "Jogador nao encontrado"
+		end
+		local count = parse_count(param)
+		if not count then
+			return false, "Uso: /replicar <quantidade> (1 a " .. MAX_LEN .. ")"
+		end
+
+		local item = player:get_wielded_item():get_name()
+		if item == "" then
+			return false, "Segure na mao o bloco que quer replicar"
+		end
+		local node_name = PLACER_TO_NODE[item] or item
+		local def = core.registered_nodes[node_name]
+		if not def then
+			return false, ("'%s' nao e um bloco que da pra colocar"):format(item)
+		end
+
+		local dir = look_dir(player)
+		local param2 = 0
+		if node_name == RAIL then
+			-- param2 0/2 = eixo Z (norte-sul), 1/3 = eixo X (leste-oeste)
+			param2 = (dir.x ~= 0) and 1 or 0
+		elseif def.paramtype2 == "facedir" or def.paramtype2 == "4dir" then
+			-- vira a face do bloco pra quem esta colocando, como no clique normal
+			param2 = core.dir_to_facedir(vector.multiply(dir, -1))
+		end
+
+		local pos = vector.add(vector.round(player:get_pos()), dir)
+		local changes = {}
+		for _ = 1, count do
+			if core.get_node(pos).name ~= "ignore" then
+				changes[#changes + 1] = snapshot(pos)
+				core.set_node(pos, { name = node_name, param2 = param2 })
+			end
+			pos = vector.add(pos, dir)
+		end
+		push_history(name, changes)
+		return true, ("Colocados %d x %s"):format(#changes, node_name)
+	end,
+})
+
+-- /desfazer: volta a ultima acao de /trilho, /cavar ou /replicar (ate MAX_UNDO por jogador)
 core.register_chatcommand("desfazer", {
-	description = "Desfaz o ultimo /trilho ou /cavar",
+	description = "Desfaz o ultimo /trilho, /cavar ou /replicar",
 	privs = { server = true },
 	func = function(name)
 		local h = history[name]
