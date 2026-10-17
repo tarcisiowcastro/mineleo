@@ -21,6 +21,8 @@ mods/*
 !mods/always_day/**
 !mods/trilho_cmd
 !mods/trilho_cmd/**
+!mods/piso_escorregadio
+!mods/piso_escorregadio/**
 *.log
 .idea/
 .vscode/
@@ -46,5 +48,6 @@ bin/
 .opencode/agents/wrlc-*
 .evercode/agents/z-cortex*
 .evercode/agents/wrlc-*
+.z-cortex/
 .wrlc/kit-injected-version
 # END WRLC
