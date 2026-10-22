@@ -23,6 +23,8 @@ mods/*
 !mods/trilho_cmd/**
 !mods/piso_escorregadio
 !mods/piso_escorregadio/**
+!mods/multidecor_fix
+!mods/multidecor_fix/**
 *.log
 .idea/
 .vscode/
