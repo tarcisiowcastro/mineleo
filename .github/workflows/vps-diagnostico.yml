@@ -1,0 +1,62 @@
+name: Diagnostico da VPS
+
+# Entra na VPS por SSH e coleta o estado do servidor Luanti (somente
+# leitura). Com restart=true tambem reinicia o container no final.
+# Requer os secrets VPS_HOST, VPS_USER e VPS_SSH_KEY.
+
+on:
+  push:
+    branches:
+      - dev/wizardly-rubin-kyxlpd
+    paths:
+      - ".github/workflows/vps-diagnostico.yml"
+  workflow_dispatch:
+    inputs:
+      restart:
+        description: "Reiniciar o container depois do diagnostico"
+        type: boolean
+        default: false
+
+jobs:
+  diagnostico:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configurar SSH
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/id_vps
+          chmod 600 ~/.ssh/id_vps
+          ssh-keyscan -p 22022 "$VPS_HOST" >> ~/.ssh/known_hosts
+
+      - name: Coletar diagnostico
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          ssh -i ~/.ssh/id_vps -p 22022 "$VPS_USER@$VPS_HOST" 'bash -s' <<'EOF'
+          set -x
+          uptime
+          df -h
+          free -m
+          cd ~/mineleo 2>/dev/null || cd "$(dirname "$(find / -name docker-compose.yml -path '*mineleo*' 2>/dev/null | head -1)")"
+          pwd
+          git log --oneline -3
+          docker compose ps -a
+          docker inspect --format '{{.State.Status}} restarts={{.RestartCount}} started={{.State.StartedAt}}' mineleo-luanti
+          du -sh world world/* 2>/dev/null
+          ls -la "$(docker inspect --format '{{.LogPath}}' mineleo-luanti)"
+          docker compose logs --tail=400 luanti 2>&1 | grep -iE "error|fail|emerge|warning|crash|denied" | tail -80
+          docker compose logs --tail=80 luanti 2>&1
+          EOF
+
+      - name: Reiniciar container
+        if: ${{ inputs.restart }}
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          ssh -i ~/.ssh/id_vps -p 22022 "$VPS_USER@$VPS_HOST" \
+            'cd ~/mineleo && docker compose restart && sleep 15 && docker compose logs --tail=40 luanti'
