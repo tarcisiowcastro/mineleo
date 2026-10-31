@@ -187,6 +187,32 @@ O servidor vem com mods de animais e barco, buscados via `scripts/install-mods.s
   Redo do Mobs Monster/Dmobs já instalados aqui; spawna sozinho pelo mapa
   todo, sem precisar de vila.
 
+- **[More Blocks](https://content.luanti.org/packages/Calinou/moreblocks/)** —
+  blocos novos e serra circular, que corta blocos em rampas e degraus.
+- **`/ladeira <quantidade> [largura]`** (no `trilho_cmd`, mod próprio deste
+  repo) — constrói uma rampa com o bloco da mão, subindo na direção do olhar,
+  sem sobrescrever o que já existe. Exige a priv `server`; `/desfazer` reverte.
+- **[Ambience](https://content.luanti.org/packages/TenPlus1/ambience/)** — sons
+  de ambiente.
+- **[Awards](https://content.luanti.org/packages/rubenwardy/awards/)** —
+  conquistas.
+- **[Hang Glider](https://content.luanti.org/packages/mt-mods/hangglider/)** —
+  asa-delta.
+- **[Bike](https://content.luanti.org/packages/Hume2/bike/)** — bicicleta
+  montável.
+- **[Super Duck](https://content.luanti.org/packages/apercy/hidroplane/)** (+
+  **[Super Cub](https://content.luanti.org/packages/apercy/supercub/)**, que é
+  dependência dele) — hidroavião e avião pilotáveis.
+- **[Mobs NPC](https://content.luanti.org/packages/TenPlus1/mobs_npc/)** —
+  NPCs simples e comerciante.
+- **Mods de castelo** (`castle_masonry`, `castle_gates`, `castle_lighting`,
+  `castle_shields`, `castle_storage`) — blocos e decoração medieval.
+
+⚠️ **Não instalado**: o [I3](https://content.luanti.org/packages/mt-mods/i3/)
+desativa o `unified_inventory`, do qual `ajustes_inventario` depende, e exige
+Luanti 5.10+. `castle_tapestries` também ficou de fora porque depende do
+`unifieddyes`, que exige 5.10+.
+
 ⚠️ **Não instalado**: o mod `mg` (mapgen experimental do Nore) tem aviso do
 próprio autor pra não usar em mundo já existente — como o nosso já tem muita
 coisa construída, pular esse foi o mais seguro.

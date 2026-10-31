@@ -37,6 +37,21 @@ areas https://github.com/minetest-mods/areas
 handle_schematics https://github.com/Sokomine/handle_schematics
 mg_villages https://github.com/Sokomine/mg_villages
 mobs_animal https://codeberg.org/tenplus1/mobs_animal
+pova https://codeberg.org/tenplus1/pova
+other_worlds https://codeberg.org/tenplus1/other_worlds
+moreblocks https://github.com/minetest-mods/moreblocks
+ambience https://codeberg.org/tenplus1/ambience
+awards https://codeberg.org/rubenwardy/awards
+hangglider https://github.com/mt-mods/hangglider
+bike https://gitlab.com/h2mm/bike
+supercub https://github.com/APercy/supercub
+hidroplane https://github.com/APercy/hidroplane
+mobs_npc https://codeberg.org/tenplus1/mobs_npc
+castle_masonry https://github.com/minetest-mods/castle_masonry
+castle_gates https://github.com/minetest-mods/castle_gates
+castle_lighting https://github.com/minetest-mods/castle_lighting
+castle_shields https://github.com/minetest-mods/castle_shields
+castle_storage https://github.com/minetest-mods/castle_storage
 "
 
 echo "$mods" | while read -r name url; do
