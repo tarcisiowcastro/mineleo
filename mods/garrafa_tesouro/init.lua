@@ -80,7 +80,9 @@ end
 -- Castelos originais: muralha com ameias, quatro torres, portão, pátio e torre
 -- de menagem. Eles usam a ideia medieval geral, sem reproduzir plantas de outros jogos.
 local function construir_castelo(inicio, tamanho)
-	local pedra, tijolo, madeira = "default:cobble", "default:stonebrick", "default:wood"
+	-- Este jogo não registra default:stonebrick; usar stone/cobble evita nós
+	-- desconhecidos e mantém a leitura de muralha medieval.
+	local pedra, tijolo, madeira = "default:cobble", "default:stone", "default:wood"
 	local function colocar(x,y,z,n) minetest.set_node(vector.add(inicio,{x=x,y=y,z=z}), {name=n}) end
 	local function parede(x,z)
 		for y=0,tamanho.y-7 do colocar(x,y,z,pedra) end
