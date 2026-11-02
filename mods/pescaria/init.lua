@@ -60,12 +60,35 @@ local function agua_valida(nodename)
 		or nodename == "default:river_water_flowing"
 end
 
+local ALCANCE_PESCA = 20
+
+-- pointed_thing do clique não é confiável aqui: água não é sempre "pointable"
+-- nessa versão do engine, então o clique chega com pointed_thing.type =
+-- "nothing" mesmo apontando direto pra água. Por isso fazemos o próprio
+-- raycast, forçando a detecção de líquidos (4º argumento = true).
+local function agua_na_mira(user)
+	local olho = user:get_pos()
+	olho.y = olho.y + 1.5
+	local dir = user:get_look_dir()
+	local destino = vector.add(olho, vector.multiply(dir, ALCANCE_PESCA))
+
+	local ray = minetest.raycast(olho, destino, false, true)
+	for pointed in ray do
+		if pointed.type == "node" then
+			local node = minetest.get_node(pointed.under)
+			if agua_valida(node.name) then
+				return pointed.under
+			elseif node.name ~= "air" and node.name ~= "ignore" then
+				-- bateu em bloco sólido antes de achar água: sem linha de visão
+				return nil
+			end
+		end
+	end
+	return nil
+end
+
 local function pescar(itemstack, user, pointed_thing)
 	if not (user and user:is_player()) then return end
-	if pointed_thing.type ~= "node" then return end
-
-	local node = minetest.get_node(pointed_thing.under)
-	if not agua_valida(node.name) then return end
 
 	local meta = itemstack:get_meta()
 	local agora = minetest.get_us_time() / 1e6
@@ -76,6 +99,12 @@ local function pescar(itemstack, user, pointed_thing)
 	meta:set_string("ultimo_lance", tostring(agora))
 
 	local nome = user:get_player_name()
+
+	if not agua_na_mira(user) then
+		minetest.chat_send_player(nome, S("Aponte bem pra água e tente de novo!"))
+		return itemstack
+	end
+
 	local pos = user:get_pos()
 	local capturado = sortear_peixe()
 
@@ -121,6 +150,7 @@ minetest.register_tool("pescaria:vara", {
 	wield_image = "default_stick.png^[colorize:#8B5A2B:100",
 	on_place = pescar,
 	on_secondary_use = pescar,
+	on_use = pescar,
 })
 
 minetest.register_craft({
@@ -131,3 +161,100 @@ minetest.register_craft({
 		{"", "default:stick", ""},
 	}
 })
+
+-- Povoar os mares: peixes e bichos marinhos nadando (visual, via engine Mobs Redo).
+if minetest.get_modpath("mobs") then
+	local NODES_AGUA = {
+		"default:water_source", "default:river_water_source",
+	}
+
+	mobs:register_mob("pescaria:cardume", {
+		type = "animal",
+		passive = true,
+		hp_min = 2,
+		hp_max = 4,
+		armor = 100,
+		collisionbox = {-0.15, -0.1, -0.15, 0.15, 0.1, 0.15},
+		visual = "sprite",
+		visual_size = {x = 0.5, y = 0.5},
+		textures = {"default_clay_lump.png^[colorize:#6CA6CD:150"},
+		makes_footstep_sound = false,
+		fly = true,
+		fly_in = NODES_AGUA,
+		floats = 0,
+		walk_chance = 0,
+		jump = false,
+		view_range = 10,
+		water_damage = 0,
+		lava_damage = 5,
+		light_damage = 0,
+		fear_height = 0,
+		drops = {
+			{name = "pescaria:peixinho", chance = 1, min = 1, max = 1},
+		},
+		animation = {
+			speed_normal = 15,
+			stand_start = 0, stand_end = 0,
+		},
+	})
+
+	mobs:register_egg("pescaria:cardume", S("Cardume de Peixes"),
+		"default_clay_lump.png^[colorize:#6CA6CD:150", 1)
+
+	mobs:spawn({
+		name = "pescaria:cardume",
+		nodes = NODES_AGUA,
+		min_light = 0,
+		max_light = 15,
+		interval = 30,
+		chance = 2000,
+		active_object_count = 10,
+		min_height = -50,
+		max_height = 2,
+	})
+
+	mobs:register_mob("pescaria:predador_marinho", {
+		type = "animal",
+		passive = true,
+		hp_min = 15,
+		hp_max = 25,
+		armor = 100,
+		collisionbox = {-0.6, -0.3, -0.6, 0.6, 0.3, 0.6},
+		visual = "sprite",
+		visual_size = {x = 1.5, y = 1.5},
+		textures = {"default_diamond.png^[colorize:#2E8B9A:120"},
+		makes_footstep_sound = false,
+		fly = true,
+		fly_in = NODES_AGUA,
+		floats = 0,
+		walk_chance = 0,
+		jump = false,
+		view_range = 14,
+		water_damage = 0,
+		lava_damage = 10,
+		light_damage = 0,
+		fear_height = 0,
+		drops = {
+			{name = "pescaria:peixe_dourado", chance = 2, min = 1, max = 1},
+		},
+		animation = {
+			speed_normal = 15,
+			stand_start = 0, stand_end = 0,
+		},
+	})
+
+	mobs:register_egg("pescaria:predador_marinho", S("Predador Marinho"),
+		"default_diamond.png^[colorize:#2E8B9A:120", 1)
+
+	mobs:spawn({
+		name = "pescaria:predador_marinho",
+		nodes = NODES_AGUA,
+		min_light = 0,
+		max_light = 15,
+		interval = 45,
+		chance = 9000,
+		active_object_count = 3,
+		min_height = -50,
+		max_height = 2,
+	})
+end
