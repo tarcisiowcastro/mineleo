@@ -283,3 +283,38 @@ if minetest.get_modpath("mobs") then
 		max_height = 2,
 	})
 end
+
+-- O servidor já tinha a vara de pesca do Ethereal instalada, e é ela que os
+-- jogadores têm na mão (não a nossa "pescaria:vara"). O design original dela
+-- não dá nenhum feedback: lança a linha, espera até 45s em silêncio até o
+-- peixe morder, e se o jogador clicar antes da hora ela cancela sem avisar
+-- nada — parecendo totalmente travada. Sobrescrevemos só o on_use pra dar
+-- aviso por chat e parar de cancelar silenciosamente num clique precoce.
+if minetest.get_modpath("ethereal") and minetest.registered_tools["ethereal:fishing_rod"] then
+	local original_on_use = minetest.registered_tools["ethereal:fishing_rod"].on_use
+
+	minetest.override_item("ethereal:fishing_rod", {
+		on_use = function(itemstack, player, pointed_thing)
+			local nome = player:get_player_name()
+			local pos = player:get_pos()
+			local objs = minetest.get_objects_inside_radius(pos, 15)
+
+			for _, obj in ipairs(objs) do
+				local ent = obj:get_luaentity()
+				if ent and ent.name == "ethereal:bob_entity" and ent.fisher == nome then
+					if ent.bob then
+						minetest.chat_send_player(nome, S("Puxando a linha..."))
+						return original_on_use(itemstack, player, pointed_thing)
+					else
+						minetest.chat_send_player(nome, S("O peixe ainda não mordeu, espere mais um pouco..."))
+						return itemstack -- ignora o clique, NÃO cancela a linha
+					end
+				end
+			end
+
+			minetest.chat_send_player(nome,
+				S("Vara lançada! Espere o peixe morder (pode demorar até ~40 segundos) e clique de novo."))
+			return original_on_use(itemstack, player, pointed_thing)
+		end,
+	})
+end
