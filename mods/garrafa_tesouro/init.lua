@@ -45,9 +45,9 @@ local catalogo = {
 }
 
 local castelos = {
-	{id="fortaleza", nome="Fortaleza das Quatro Torres", tamanho={x=43,y=18,z=43}},
-	{id="alcazar", nome="Alcáçar do Pátio Alto", tamanho={x=55,y=22,z=47}},
-	{id="cidadela", nome="Cidadela do Rei", tamanho={x=63,y=25,z=55}},
+	{id="fortaleza", nome="Fortaleza das Quatro Torres", tamanho={x=43,y=18,z=43}, preview="garrafa_tesouro_preview_fortaleza.png", estilo="quadrado"},
+	{id="alcazar", nome="Alcáçar do Pátio Alto", tamanho={x=55,y=22,z=47}, preview="garrafa_tesouro_preview_alcazar.png", estilo="patio"},
+	{id="cidadela", nome="Cidadela do Rei", tamanho={x=63,y=25,z=55}, preview="garrafa_tesouro_preview_cidadela.png", estilo="cidadela"},
 }
 
 -- Além dos modelos selecionados acima, o painel descobre o restante dos
@@ -79,7 +79,7 @@ end
 
 -- Castelos originais: muralha com ameias, quatro torres, portão, pátio e torre
 -- de menagem. Eles usam a ideia medieval geral, sem reproduzir plantas de outros jogos.
-local function construir_castelo(inicio, tamanho)
+local function construir_castelo(inicio, tamanho, estilo)
 	-- Este jogo não registra default:stonebrick; usar stone/cobble evita nós
 	-- desconhecidos e mantém a leitura de muralha medieval.
 	local pedra, tijolo, madeira = "default:cobble", "default:stone", "default:wood"
@@ -96,11 +96,18 @@ local function construir_castelo(inicio, tamanho)
 	end end
 	for x=3,tamanho.x-4 do for z=3,tamanho.z-4 do colocar(x,0,z,tijolo) end end
 	local torres={{2,2},{tamanho.x-3,2},{2,tamanho.z-3},{tamanho.x-3,tamanho.z-3}}
+	if estilo == "patio" then
+		-- Alcáçar: duas torres monumentais no portão e alas internas em volta do pátio.
+		table.insert(torres, {math.floor(tamanho.x/2)-4,2}); table.insert(torres, {math.floor(tamanho.x/2)+4,2})
+	elseif estilo == "cidadela" then
+		-- Cidadela: seis torres espalhadas pela muralha, não quatro cantos idênticos.
+		table.insert(torres, {math.floor(tamanho.x/2),2}); table.insert(torres, {math.floor(tamanho.x/2),tamanho.z-3})
+	end
 	for _,t in ipairs(torres) do for x=t[1]-2,t[1]+2 do for z=t[2]-2,t[2]+2 do
 		for y=0,tamanho.y-1 do if x==t[1]-2 or x==t[1]+2 or z==t[2]-2 or z==t[2]+2 then colocar(x,y,z,tijolo) end end
 		if (x+t[1]+z+t[2])%2==0 then colocar(x,tamanho.y,z,tijolo) end
 	end end end
-	local kx, kz = math.floor(tamanho.x/2), math.floor(tamanho.z/2)+5
+	local kx, kz = math.floor(tamanho.x/2), math.floor(tamanho.z/2)+(estilo == "patio" and 10 or 5)
 	for x=kx-6,kx+6 do for z=kz-5,kz+5 do
 		for y=1,tamanho.y-7 do if x==kx-6 or x==kx+6 or z==kz-5 or z==kz+5 then colocar(x,y,z,pedra) end end
 		if (x+z)%2==0 then colocar(x,tamanho.y-6,z,tijolo) end
@@ -108,6 +115,16 @@ local function construir_castelo(inicio, tamanho)
 	for x=kx-2,kx+2 do for y=1,3 do colocar(x,y,3,"air") end end
 	for x=math.floor(tamanho.x/2)-2,math.floor(tamanho.x/2)+2 do for y=0,4 do colocar(x,y,0,"air") end end
 	for x=5,tamanho.x-6,6 do for z=5,tamanho.z-6,6 do colocar(x,1,z,madeira) end end
+	if estilo == "patio" then
+		for x=7,tamanho.x-8 do for y=1,6 do if x%2==0 then colocar(x,y,8,pedra); colocar(x,y,tamanho.z-9,pedra) end end end
+	elseif estilo == "cidadela" then
+		-- Torre de menagem octogonal, distinta do salão retangular da fortaleza.
+		for x=kx-7,kx+7 do for z=kz-7,kz+7 do
+			if math.abs(x-kx)+math.abs(z-kz) >= 9 and math.abs(x-kx)+math.abs(z-kz) <= 13 then
+				for y=1,tamanho.y-3 do colocar(x,y,z,tijolo) end
+			end
+		end end
+	end
 end
 
 minetest.register_node("garrafa_tesouro:marco_deed", {
@@ -176,7 +193,7 @@ local function colocar_deed(itemstack, placer, pointed_thing, def)
 	local fim = vector.add(inicio, {x=tamanho.x-1,y=tamanho.y,z=tamanho.z-1})
 	if minetest.is_protected(inicio, dono) or minetest.is_protected(fim, dono) then return itemstack end
 	if def.castelo then
-		construir_castelo(inicio, tamanho)
+		construir_castelo(inicio, tamanho, def.estilo)
 	else
 		minetest.place_schematic(inicio, schem_path .. def.arquivo, "0", nil, true)
 	end
@@ -220,9 +237,10 @@ local function mostrar_catalogo(nome, pagina)
 		local def = por_id[(catalogo[primeiro+i] or castelos[primeiro+i-#catalogo]) and (catalogo[primeiro+i] or castelos[primeiro+i-#catalogo]).id]
 		if def then
 			local x,y = (i%3)*4, 0.9+math.floor(i/3)*1.7
-			formspec[#formspec+1] = string.format("button[%0.1f,%0.1f;2.55,0.7;ver_%s;Ver prévia]",x+.1,y,def.id)
-			formspec[#formspec+1] = string.format("button[%0.1f,%0.1f;1.25,0.7;pegar_%s;Pegar]",x+2.7,y,def.id)
-			formspec[#formspec+1] = string.format("label[%0.1f,%0.1f;%s]",x+.1,y+.75,minetest.formspec_escape(def.nome))
+			local imagem = def.preview or "garrafa_tesouro_preview_casa.png"
+			formspec[#formspec+1] = string.format("image[%0.1f,%0.1f;1.3,1.3;%s]",x+.1,y-.1,imagem)
+			formspec[#formspec+1] = string.format("button[%0.1f,%0.1f;2.45,0.7;pegar_%s;Pegar deed]",x+1.45,y,def.id)
+			formspec[#formspec+1] = string.format("label[%0.1f,%0.1f;%s]",x+1.45,y+.75,minetest.formspec_escape(def.nome))
 		end
 	end
 	formspec[#formspec+1] = "button[0.4,8.2;2,0.6;anterior;< Anterior]button[2.6,8.2;2,0.6;proxima;Próxima >]button_exit[9.2,8.2;2,0.6;sair;Fechar]"
@@ -267,7 +285,6 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 	if fields.voltar then return mostrar_catalogo(nome, pagina_catalogo[nome] or 1) end
 	if fields.anterior then return mostrar_catalogo(nome, (pagina_catalogo[nome] or 1)-1) end
 	if fields.proxima then return mostrar_catalogo(nome, (pagina_catalogo[nome] or 1)+1) end
-	for id, def in pairs(por_id) do if fields["ver_"..id] then mostrar_previa(nome, def); return true end end
 	for id in pairs(por_id) do if fields["pegar_"..id] then
 		local sobra = player:get_inventory():add_item("main", "garrafa_tesouro:deed_"..id)
 		if not sobra:is_empty() then minetest.add_item(player:get_pos(), sobra) end
