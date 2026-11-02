@@ -45,9 +45,9 @@ local catalogo = {
 }
 
 local castelos = {
-	{id="fortaleza", nome="Château Fortificado", arquivo="chateau_without_garden.mts", estilo="esquema"},
-	{id="alcazar", nome="Alcáçar do Pátio Alto", tamanho={x=55,y=22,z=47}, preview="garrafa_tesouro_preview_alcazar.png", estilo="patio"},
-	{id="cidadela", nome="Cidadela do Rei", tamanho={x=63,y=25,z=55}, preview="garrafa_tesouro_preview_cidadela.png", estilo="cidadela"},
+	{id="bodiam", nome="Castelo de Bodiam", tamanho={x=57,y=22,z=57}, estilo="bodiam"},
+	{id="conwy", nome="Castelo de Conwy", tamanho={x=69,y=28,z=39}, estilo="conwy"},
+	{id="krak", nome="Krak des Chevaliers", tamanho={x=77,y=30,z=65}, estilo="krak"},
 }
 
 -- Além dos modelos selecionados acima, o painel descobre o restante dos
@@ -127,18 +127,22 @@ local function construir_castelo(inicio, tamanho, estilo)
 	end end
 	for x=3,tamanho.x-4 do for z=3,tamanho.z-4 do colocar(x,0,z,tijolo) end end
 	local torres={{2,2},{tamanho.x-3,2},{2,tamanho.z-3},{tamanho.x-3,tamanho.z-3}}
-	if estilo == "patio" then
-		-- Alcáçar: duas torres monumentais no portão e alas internas em volta do pátio.
+	if estilo == "bodiam" then
+		-- Bodiam: portaria central e duas torres avançadas protegendo a entrada.
 		table.insert(torres, {math.floor(tamanho.x/2)-4,2}); table.insert(torres, {math.floor(tamanho.x/2)+4,2})
-	elseif estilo == "cidadela" then
-		-- Cidadela: seis torres espalhadas pela muralha, não quatro cantos idênticos.
+	elseif estilo == "conwy" then
+		-- Conwy: oito torres, quatro nos cantos e quatro no meio das cortinas.
 		table.insert(torres, {math.floor(tamanho.x/2),2}); table.insert(torres, {math.floor(tamanho.x/2),tamanho.z-3})
+		table.insert(torres, {2,math.floor(tamanho.z/2)}); table.insert(torres, {tamanho.x-3,math.floor(tamanho.z/2)})
+	elseif estilo == "krak" then
+		-- Krak: torres externas regulares em uma segunda linha defensiva.
+		for x=9,tamanho.x-10,14 do table.insert(torres,{x,2}); table.insert(torres,{x,tamanho.z-3}) end
 	end
 	for _,t in ipairs(torres) do for x=t[1]-2,t[1]+2 do for z=t[2]-2,t[2]+2 do
 		for y=0,tamanho.y-1 do if x==t[1]-2 or x==t[1]+2 or z==t[2]-2 or z==t[2]+2 then colocar(x,y,z,tijolo) end end
 		if (x+t[1]+z+t[2])%2==0 then colocar(x,tamanho.y,z,tijolo) end
 	end end end
-	local kx, kz = math.floor(tamanho.x/2), math.floor(tamanho.z/2)+(estilo == "patio" and 10 or 5)
+	local kx, kz = math.floor(tamanho.x/2), math.floor(tamanho.z/2)+(estilo == "bodiam" and 10 or 5)
 	for x=kx-6,kx+6 do for z=kz-5,kz+5 do
 		for y=1,tamanho.y-7 do if x==kx-6 or x==kx+6 or z==kz-5 or z==kz+5 then colocar(x,y,z,pedra) end end
 		if (x+z)%2==0 then colocar(x,tamanho.y-6,z,tijolo) end
@@ -146,14 +150,19 @@ local function construir_castelo(inicio, tamanho, estilo)
 	for x=kx-2,kx+2 do for y=1,3 do colocar(x,y,3,"air") end end
 	for x=math.floor(tamanho.x/2)-2,math.floor(tamanho.x/2)+2 do for y=0,4 do colocar(x,y,0,"air") end end
 	for x=5,tamanho.x-6,6 do for z=5,tamanho.z-6,6 do colocar(x,1,z,madeira) end end
-	if estilo == "patio" then
+	if estilo == "bodiam" then
 		for x=7,tamanho.x-8 do for y=1,6 do if x%2==0 then colocar(x,y,8,pedra); colocar(x,y,tamanho.z-9,pedra) end end end
-	elseif estilo == "cidadela" then
+	elseif estilo == "conwy" then
 		-- Torre de menagem octogonal, distinta do salão retangular da fortaleza.
 		for x=kx-7,kx+7 do for z=kz-7,kz+7 do
 			if math.abs(x-kx)+math.abs(z-kz) >= 9 and math.abs(x-kx)+math.abs(z-kz) <= 13 then
 				for y=1,tamanho.y-3 do colocar(x,y,z,tijolo) end
 			end
+		end end
+	elseif estilo == "krak" then
+		-- Segunda muralha interna elevada e corredor exposto entre os dois anéis.
+		for x=9,tamanho.x-10 do for z=9,tamanho.z-10 do
+			if x==9 or z==9 or x==tamanho.x-10 or z==tamanho.z-10 then for y=1,tamanho.y-9 do colocar(x,y,z,tijolo) end end
 		end end
 	end
 end
