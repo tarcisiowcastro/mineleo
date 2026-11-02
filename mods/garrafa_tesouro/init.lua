@@ -77,6 +77,37 @@ local function tamanho_esquema(def)
 	return esquema and esquema.size and vector.new(esquema.size) or nil
 end
 
+-- As vilas antigas foram desenhadas com o mod cottages, que não está presente
+-- neste servidor. Nunca entregamos um esquema com "no node": nomes ausentes
+-- são convertidos previamente em blocos equivalentes já registrados.
+local substituicoes_cache = {}
+local equivalentes_cottages = {
+	["cottages:roof_straw"]="default:wood", ["cottages:roof_connector_straw"]="default:wood", ["cottages:roof_flat_straw"]="default:wood",
+	["cottages:roof_wood"]="default:wood", ["cottages:roof_connector_wood"]="default:wood", ["cottages:roof_flat_wood"]="default:wood",
+	["cottages:window_shutter_open"]="default:glass", ["cottages:glass_pane"]="default:glass", ["cottages:glass_pane_side"]="default:glass",
+	["cottages:shelf"]="default:wood", ["cottages:bench"]="default:wood", ["cottages:table"]="default:wood", ["cottages:wood_flat"]="default:wood",
+	["cottages:wagon_wheel"]="default:wood", ["cottages:fence_small"]="default:wood", ["cottages:gate_open"]="default:wood", ["cottages:gate_closed"]="default:wood",
+	["cottages:hatch_wood"]="default:wood", ["cottages:half_door"]="default:wood", ["cottages:half_door_inverted"]="default:wood",
+	["cottages:bed_head"]="default:wood", ["cottages:bed_foot"]="default:wood", ["cottages:barrel"]="default:chest", ["cottages:barrel_lying"]="default:chest",
+	["cottages:chest_work"]="default:chest", ["cottages:chest_private"]="default:chest", ["cottages:loam"]="default:dirt", ["cottages:straw_ground"]="default:dirt",
+	["cottages:straw_bale"]="default:dirt", ["cottages:wool_tent"]="default:wood", ["cottages:washing"]="default:wood",
+	["doors:door_wood_t_1"]="default:wood", ["poisonivy:seedling"]="default:grass_1",
+}
+local function substituicoes_para(def)
+	if substituicoes_cache[def.id] then return substituicoes_cache[def.id] end
+	local lista = {}
+	if handle_schematics and handle_schematics.analyze_mts_file and schem_path then
+		local dados = handle_schematics.analyze_mts_file(schem_path .. def.arquivo:gsub("%.mts$", ""))
+		if dados and dados.nodenames then for _, nome in ipairs(dados.nodenames) do
+			if nome ~= "air" and not minetest.registered_nodes[nome] then
+				table.insert(lista, {nome, equivalentes_cottages[nome] or "default:stone"})
+			end
+		end end
+	end
+	substituicoes_cache[def.id] = lista
+	return lista
+end
+
 -- Castelos originais: muralha com ameias, quatro torres, portão, pátio e torre
 -- de menagem. Eles usam a ideia medieval geral, sem reproduzir plantas de outros jogos.
 local function construir_castelo(inicio, tamanho, estilo)
@@ -195,7 +226,7 @@ local function colocar_deed(itemstack, placer, pointed_thing, def)
 	if def.castelo then
 		construir_castelo(inicio, tamanho, def.estilo)
 	else
-		minetest.place_schematic(inicio, schem_path .. def.arquivo, "0", nil, true)
+		minetest.place_schematic(inicio, schem_path .. def.arquivo, "0", substituicoes_para(def), true)
 	end
 	-- A placa fica junto à entrada, não escondida no teto: ela mostra o dono e
 	-- também é o ponto físico para recolher a construção ao mesmo deed.
