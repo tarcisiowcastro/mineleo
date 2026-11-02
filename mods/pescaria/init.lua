@@ -390,8 +390,165 @@ if minetest.get_modpath("ethereal") and minetest.registered_tools["ethereal:fish
 			end
 
 			minetest.chat_send_player(nome,
-				S("Vara lançada! Espere o peixe morder (pode demorar até ~40 segundos) e clique de novo."))
+				S("Vara lançada! Fica de olho na isca, o peixe morde rapidinho."))
 			return original_on_use(itemstack, player, pointed_thing)
 		end,
 	})
+end
+
+-- Tempo de espera da isca mais curto e com um "aviso de mordida" claro
+-- (partícula maior + som + mensagem direta pro jogador), pra ficar mais
+-- divertido e menos de "ficou parado sem acontecer nada".
+if minetest.get_modpath("ethereal") and minetest.registered_entities["ethereal:bob_entity"] then
+	local bob_def = minetest.registered_entities["ethereal:bob_entity"]
+	local get_node = minetest.get_node
+	local registered_nodes = minetest.registered_nodes
+	local random = math.random
+
+	local function bolha(pos)
+		minetest.add_particle({
+			pos = {x = pos.x + random() - 0.5, y = pos.y + 0.1, z = pos.z + random() - 0.5},
+			velocity = {x = 0, y = 4, z = 0},
+			acceleration = {x = 0, y = -5, z = 0},
+			expirationtime = random() * 0.5,
+			size = random(),
+			collisiondetection = false,
+			vertical = false,
+			texture = "bubble.png",
+			glow = 1,
+		})
+	end
+
+	local function splash_mordida(pos)
+		minetest.add_particle({
+			pos = pos,
+			velocity = {x = 0, y = 3, z = 0},
+			acceleration = {x = 0, y = -9, z = 0},
+			expirationtime = 0.6,
+			size = 4,
+			collisiondetection = false,
+			vertical = false,
+			texture = "bubble.png",
+			glow = 4,
+		})
+	end
+
+	bob_def.on_step = function(self, dtime)
+		local pos = self.object:get_pos()
+		local node = get_node(pos)
+		local def = registered_nodes[node.name]
+
+		if not self.cast then
+			if (def and def.walkable) or node.name == "ignore" then
+				self.object:remove()
+				return
+			end
+
+			if def and def.liquidtype == "source"
+			and minetest.get_item_group(node.name, "water") > 0 then
+
+				local free_fall, blocker = minetest.line_of_sight(
+					{x = pos.x, y = pos.y + 2, z = pos.z},
+					{x = pos.x, y = pos.y, z = pos.z})
+
+				local player = self.fisher and minetest.get_player_by_name(self.fisher)
+				local bait = 0
+
+				if player then
+					local inv = player:get_inventory()
+					if inv and inv:contains_item("main", "caverealms:glow_bait") then
+						inv:remove_item("main", "caverealms:glow_bait")
+						bait = 3
+					elseif inv and inv:contains_item("main", "ethereal:worm") then
+						inv:remove_item("main", "ethereal:worm")
+						bait = 2
+					end
+				end
+
+				pos = {x = pos.x, y = blocker.y + 0.45, z = pos.z}
+				self.object:set_acceleration({x = 0, y = 0, z = 0})
+				self.object:set_velocity({x = 0, y = 0, z = 0})
+				self.object:set_pos(pos)
+				self.bait = bait
+				self.cast = true
+
+				for i = 1, 4 do bolha(pos) end
+				minetest.sound_play("default_water_footstep", {pos = pos, gain = 0.1}, true)
+			end
+		else
+			if not self.fisher or self.fisher == "" then
+				self.object:remove()
+				return
+			end
+
+			local player = minetest.get_player_by_name(self.fisher)
+			if not player then
+				self.object:remove()
+				return
+			end
+
+			local wield = player:get_wielded_item()
+			if not wield or wield:get_name() ~= "ethereal:fishing_rod" then
+				self.object:remove()
+				return
+			end
+
+			local pla_pos = player:get_pos()
+			if (pla_pos.y - pos.y) > 15 or (pla_pos.y - pos.y) < -15
+			or (pla_pos.x - pos.x) > 15 or (pla_pos.x - pos.x) < -15
+			or (pla_pos.z - pos.z) > 15 or (pla_pos.z - pos.z) < -15 then
+				self.object:remove()
+				return
+			end
+
+			if def and def.liquidtype == "source"
+			and minetest.get_item_group(def.name, "water") ~= 0 then
+
+				self.old_y = self.old_y or pos.y
+
+				if not self.patience or self.patience <= 0 then
+					-- espera bem mais curta que o original (10-45s): 3-8s,
+					-- menos ainda se usou isca.
+					self.patience = random(3, math.max(3, 8 - self.bait))
+					self.bait = 0
+				end
+
+				if self.bob then
+					bolha(pos)
+					if self.timer < self.patience then
+						self.timer = self.timer + dtime
+					else
+						self.patience = 0
+						self.timer = 0
+						self.bob = false
+					end
+				else
+					if self.timer < self.patience then
+						self.timer = self.timer + dtime
+					else
+						self.bob = true
+						self.patience = 2.5 -- janela maior pra reagir e puxar
+						self.timer = 0
+
+						self.object:set_velocity({x = 0, y = -0.8, z = 0})
+						self.object:set_acceleration({x = 0, y = 4, z = 0})
+
+						splash_mordida(pos)
+						minetest.sound_play("default_water_footstep", {pos = pos, gain = 0.4}, true)
+						minetest.chat_send_player(self.fisher, S("🎣 Mordeu! Clique AGORA pra puxar!"))
+					end
+				end
+			else
+				if self.old_y and pos.y > self.old_y then
+					self.object:set_velocity({x = 0, y = 0, z = 0})
+					self.object:set_acceleration({x = 0, y = 0, z = 0})
+					self.object:set_pos({x = pos.x, y = self.old_y, z = pos.z})
+				end
+
+				if not self.bob then
+					self.object:remove()
+				end
+			end
+		end
+	end
 end
