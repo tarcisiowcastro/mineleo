@@ -122,6 +122,21 @@ for nome, def in pairs(deeds) do
 	})
 end
 
+minetest.register_chatcommand("deeds", {
+	description = S("Recebe todos os deeds de construção para teste (admin)"),
+	privs = {give = true},
+	func = function(nome)
+		local jogador = minetest.get_player_by_name(nome)
+		if not jogador then return false end
+		local inv = jogador:get_inventory()
+		for tipo in pairs(deeds) do
+			local sobra = inv:add_item("main", "garrafa_tesouro:deed_" .. tipo)
+			if not sobra:is_empty() then minetest.add_item(jogador:get_pos(), sobra) end
+		end
+		return true, S("Todos os deeds foram adicionados ao inventário.")
+	end,
+})
+
 -- Os planetas ocupam faixas diferentes de Y, mas o discovery_maps é 2D. O
 -- tesouro é sempre escolhido perto do jogador em X/Z e sua altura é resolvida
 -- depois a partir do plano onde a garrafa foi aberta.
