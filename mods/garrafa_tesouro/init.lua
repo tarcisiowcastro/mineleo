@@ -50,6 +50,22 @@ local castelos = {
 	{id="cidadela", nome="Cidadela do Rei", tamanho={x=63,y=25,z=55}},
 }
 
+-- Além dos modelos selecionados acima, o painel descobre o restante dos
+-- esquemas que a instalação de mg_villages oferece. Isso evita um catálogo
+-- incompleto quando o pacote do servidor recebe novas casas.
+local arquivo_catalogado = {}
+for _, d in ipairs(catalogo) do arquivo_catalogado[d.arquivo] = true end
+if schem_path and minetest.get_dir_list then
+	for _, arquivo in ipairs(minetest.get_dir_list(schem_path, false)) do
+		if arquivo:sub(-4) == ".mts" and not arquivo_catalogado[arquivo] then
+			local rotulo = arquivo:gsub("%.mts$", ""):gsub("[_%-]", " ")
+			local id = "vila_" .. arquivo:gsub("[^%w]", "_")
+			table.insert(catalogo, {id=id, nome="Estrutura da vila: " .. rotulo, arquivo=arquivo, grupo="Vilas"})
+			arquivo_catalogado[arquivo] = true
+		end
+	end
+end
+
 local por_id = {}
 for _, d in ipairs(catalogo) do por_id[d.id] = d end
 for _, d in ipairs(castelos) do d.castelo = true; por_id[d.id] = d end
