@@ -13,6 +13,8 @@ local tabela_pesca = {
 	{name = "garrafa_tesouro:garrafa", chance = 3},
 }
 
+local armazenamento = minetest.get_mod_storage()
+
 local function sortear_peixe()
 	local roll = math.random(1, 100)
 	local acumulado = 0
@@ -25,32 +27,99 @@ local function sortear_peixe()
 	return tabela_pesca[1].name
 end
 
+-- Além da chance normal de 3%, ninguém fica preso numa maré de azar: a cada
+-- oito capturas do mesmo jogador, a próxima é uma garrafa do tesouro.
+local function sortear_captura(nome)
+	local chave = "capturas_sem_garrafa:" .. nome
+	local sem_garrafa = tonumber(armazenamento:get_string(chave)) or 0
+
+	if sem_garrafa >= 7 then
+		armazenamento:set_string(chave, "0")
+		return "garrafa_tesouro:garrafa"
+	end
+
+	local capturado = sortear_peixe()
+	if capturado == "garrafa_tesouro:garrafa" then
+		armazenamento:set_string(chave, "0")
+	else
+		armazenamento:set_string(chave, tostring(sem_garrafa + 1))
+	end
+	return capturado
+end
+
+local agua_na_mira
+
+local function soltar_peixe(itemstack, user, nome_mob)
+	if not (user and user:is_player()) then return itemstack end
+
+	if not minetest.registered_entities[nome_mob] then
+		minetest.chat_send_player(user:get_player_name(),
+			S("Não foi possível soltar o peixe agora. Tente novamente após o servidor carregar."))
+		return itemstack
+	end
+
+	local pos = agua_na_mira(user)
+	if not pos then
+		minetest.chat_send_player(user:get_player_name(),
+			S("Aponte para a água para soltar o peixe de volta."))
+		return itemstack
+	end
+
+	if minetest.is_protected(pos, user:get_player_name()) then
+		minetest.record_protection_violation(pos, user:get_player_name())
+		return itemstack
+	end
+
+	local peixe = minetest.add_entity(vector.offset(pos, 0, 0.2, 0), nome_mob)
+	if not peixe then
+		minetest.chat_send_player(user:get_player_name(), S("A água está agitada demais; tente soltar o peixe de novo."))
+		return itemstack
+	end
+
+	itemstack:take_item()
+	minetest.chat_send_player(user:get_player_name(), S("O peixe voltou a nadar livre!"))
+	minetest.sound_play("default_water_footstep", {pos = pos, gain = 0.3}, true)
+	return itemstack
+end
+
 minetest.register_craftitem("pescaria:peixinho", {
-	description = S("Peixinho"),
+	description = S("Peixinho\nClique com o botão direito olhando a água para soltar"),
 	inventory_image = "default_clay_lump.png^[colorize:#6CA6CD:150",
 	groups = {food = 1},
 	on_use = minetest.item_eat(1),
+	on_secondary_use = function(itemstack, user)
+		return soltar_peixe(itemstack, user, "pescaria:cardume")
+	end,
 })
 
 minetest.register_craftitem("pescaria:peixe_colorido", {
-	description = S("Peixe Colorido\nMuito bonito, ótimo para exibir!"),
+	description = S("Peixe Colorido\nMuito bonito, ótimo para exibir!\nClique com o botão direito olhando a água para soltar"),
 	inventory_image = "default_clay_lump.png^[colorize:#FF6EC7:170",
 	groups = {food = 1},
 	on_use = minetest.item_eat(2),
+	on_secondary_use = function(itemstack, user)
+		return soltar_peixe(itemstack, user, "pescaria:cardume")
+	end,
 })
 
 minetest.register_craftitem("pescaria:peixe_dourado", {
-	description = S("Peixe Dourado\nRaro e valioso!"),
+	description = S("Peixe Dourado\nRaro e valioso!\nClique com o botão direito olhando a água para soltar"),
 	inventory_image = "default_gold_ingot.png^[colorize:#FFD700:60^[resize:16x16",
 	groups = {food = 1},
 	on_use = minetest.item_eat(3),
+	on_secondary_use = function(itemstack, user)
+		return soltar_peixe(itemstack, user, "pescaria:predador_marinho")
+	end,
 })
 
 minetest.register_craftitem("pescaria:peixe_lendario", {
-	description = S("Peixe Cristal Lendário\nUma lenda das águas, lindo e muito valioso!"),
+	description = S("Peixe Cristal Lendário\nUma lenda das águas, lindo e muito valioso!\nClique com o botão direito olhando a água para soltar"),
 	inventory_image = "default_diamond.png^[colorize:#7DF9FF:90",
 	groups = {food = 1},
 	on_use = minetest.item_eat(4),
+	on_secondary_use = function(itemstack, user)
+		return soltar_peixe(itemstack, user, "pescaria:predador_marinho")
+	end,
 })
 
 local function agua_valida(nodename)
@@ -66,7 +135,7 @@ local ALCANCE_PESCA = 20
 -- nessa versão do engine, então o clique chega com pointed_thing.type =
 -- "nothing" mesmo apontando direto pra água. Por isso fazemos o próprio
 -- raycast, forçando a detecção de líquidos (4º argumento = true).
-local function agua_na_mira(user)
+agua_na_mira = function(user)
 	local olho = user:get_pos()
 	olho.y = olho.y + 1.5
 	local dir = user:get_look_dir()
@@ -85,6 +154,40 @@ local function agua_na_mira(user)
 		end
 	end
 	return nil
+end
+
+local function dar_captura(user)
+	local nome = user:get_player_name()
+	local pos = user:get_pos()
+	local capturado = sortear_captura(nome)
+
+	local inv = user:get_inventory()
+	local sobra = inv:add_item("main", capturado)
+	if not sobra:is_empty() then
+		minetest.add_item(pos, sobra)
+	end
+
+	local def = minetest.registered_items[capturado]
+	local descricao = def and def.description:match("^[^\n]*") or capturado
+	minetest.chat_send_player(nome, S("Você pescou: @1!", descricao))
+	minetest.sound_play("default_place_node_hard",
+		{pos = pos, gain = 0.4, max_hear_distance = 8}, true)
+
+	if capturado == "pescaria:peixe_lendario" then
+		minetest.chat_send_all(S("@1 pescou algo incrível: um Peixe Cristal Lendário!", nome))
+		minetest.add_particlespawner({
+			amount = 40,
+			time = 1,
+			minpos = vector.offset(pos, -0.5, 0, -0.5),
+			maxpos = vector.offset(pos, 0.5, 1, 0.5),
+			minvel = {x = -1, y = 1, z = -1}, maxvel = {x = 1, y = 3, z = 1},
+			minacc = {x = 0, y = -2, z = 0}, maxacc = {x = 0, y = -2, z = 0},
+			minexptime = 0.5, maxexptime = 1.5, minsize = 2, maxsize = 4,
+			texture = "default_diamond.png^[colorize:#7DF9FF:140",
+		})
+	elseif capturado == "garrafa_tesouro:garrafa" then
+		minetest.chat_send_player(nome, S("Você pescou uma Garrafa do Tesouro! Clique nela para revelar o mapa."))
+	end
 end
 
 local function pescar(itemstack, user, pointed_thing)
@@ -108,41 +211,7 @@ local function pescar(itemstack, user, pointed_thing)
 		return itemstack
 	end
 
-	local pos = user:get_pos()
-	local capturado = sortear_peixe()
-
-	local inv = user:get_inventory()
-	local sobra = inv:add_item("main", capturado)
-	if not sobra:is_empty() then
-		minetest.add_item(pos, sobra)
-	end
-
-	local def = minetest.registered_items[capturado]
-	local descricao = def and def.description:match("^[^\n]*") or capturado
-	minetest.chat_send_player(nome, S("Você pescou: @1!", descricao))
-	minetest.sound_play("default_place_node_hard",
-		{pos = pos, gain = 0.4, max_hear_distance = 8}, true)
-
-	if capturado == "pescaria:peixe_lendario" then
-		minetest.chat_send_all(S("@1 pescou algo incrível: um Peixe Cristal Lendário!", nome))
-		minetest.add_particlespawner({
-			amount = 40,
-			time = 1,
-			minpos = vector.offset(pos, -0.5, 0, -0.5),
-			maxpos = vector.offset(pos, 0.5, 1, 0.5),
-			minvel = {x = -1, y = 1, z = -1},
-			maxvel = {x = 1, y = 3, z = 1},
-			minacc = {x = 0, y = -2, z = 0},
-			maxacc = {x = 0, y = -2, z = 0},
-			minexptime = 0.5,
-			maxexptime = 1.5,
-			minsize = 2,
-			maxsize = 4,
-			texture = "default_diamond.png^[colorize:#7DF9FF:140",
-		})
-	elseif capturado == "garrafa_tesouro:garrafa" then
-		minetest.chat_send_player(nome, S("Tem algo dentro da garrafa... clique nela para descobrir!"))
-	end
+	dar_captura(user)
 
 	return itemstack
 end
@@ -229,6 +298,7 @@ if minetest.get_modpath("mobs") then
 	mobs:spawn({
 		name = "pescaria:cardume",
 		nodes = NODES_AGUA,
+		neighbors = NODES_AGUA,
 		min_light = 0,
 		max_light = 15,
 		interval = 15,
@@ -244,13 +314,37 @@ if minetest.get_modpath("mobs") then
 	mobs:spawn({
 		name = "pescaria:cardume",
 		nodes = NODES_AGUA,
+		neighbors = NODES_AGUA,
 		min_light = 0,
 		max_light = 15,
-		chance = 2,
+		chance = 1,
 		active_object_count = 10,
 		min_height = -50,
 		max_height = 2,
 		on_map_load = true,
+	})
+
+	-- A LBM anterior já pode ter sido marcada como executada nos blocos de um
+	-- mundo existente antes do conserto acima. Esta passagem, com outro nome,
+	-- repovoa uma vez esses mares já conhecidos sem esperar o jogador viajar
+	-- para regiões novas.
+	minetest.register_lbm({
+		name = "pescaria:repopular_mar_v2",
+		label = "Repovoar mares com cardumes",
+		nodenames = NODES_AGUA,
+		run_at_every_load = false,
+		action = function(pos)
+			local bloco = string.format("%d:%d:%d",
+				math.floor(pos.x / 16), math.floor(pos.y / 16), math.floor(pos.z / 16))
+			local chave = "mar_repovoado_v2:" .. bloco
+			if armazenamento:get_string(chave) ~= "" then return end
+			armazenamento:set_string(chave, "1")
+			minetest.after(0, function()
+				if minetest.registered_entities["pescaria:cardume"] then
+					minetest.add_entity(vector.offset(pos, 0, 0.2, 0), "pescaria:cardume")
+				end
+			end)
+		end,
 	})
 
 	mobs:register_mob("pescaria:predador_marinho", {
@@ -289,6 +383,7 @@ if minetest.get_modpath("mobs") then
 	mobs:spawn({
 		name = "pescaria:predador_marinho",
 		nodes = NODES_AGUA,
+		neighbors = NODES_AGUA,
 		min_light = 0,
 		max_light = 15,
 		interval = 20,
@@ -301,6 +396,7 @@ if minetest.get_modpath("mobs") then
 	mobs:spawn({
 		name = "pescaria:predador_marinho",
 		nodes = NODES_AGUA,
+		neighbors = NODES_AGUA,
 		min_light = 0,
 		max_light = 15,
 		chance = 8,
@@ -381,7 +477,12 @@ if minetest.get_modpath("ethereal") and minetest.registered_tools["ethereal:fish
 				if ent and ent.name == "ethereal:bob_entity" and ent.fisher == nome then
 					if ent.bob then
 						minetest.chat_send_player(nome, S("Puxando a linha..."))
-						return original_on_use(itemstack, player, pointed_thing)
+						local resultado = original_on_use(itemstack, player, pointed_thing)
+						-- A vara do Ethereal é a que muitos jogadores já possuem. O
+						-- resgate da isca precisa alimentar a mesma tabela de prêmios
+						-- da nossa vara, inclusive as garrafas e sua garantia.
+						dar_captura(player)
+						return resultado or itemstack
 					else
 						minetest.chat_send_player(nome, S("O peixe ainda não mordeu, espere mais um pouco..."))
 						return itemstack -- ignora o clique, NÃO cancela a linha

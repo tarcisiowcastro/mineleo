@@ -43,17 +43,21 @@ local function tiles_descobertos_distantes(nome_jogador, pos)
 	return candidatos
 end
 
--- Retorna x, z do tesouro, ou nil se o jogador ainda não descobriu mapa suficiente.
+-- Retorna sempre um ponto para o tesouro. Quando ainda não há uma região
+-- distante descoberta, cria o destino numa direção aleatória: o mapa da
+-- garrafa continua funcionando para quem acabou de começar a explorar.
 local function sortear_local_tesouro(nome_jogador, pos)
 	local candidatos = tiles_descobertos_distantes(nome_jogador, pos)
-	if #candidatos == 0 then
-		return nil
+	if #candidatos > 0 then
+		local tile = candidatos[math.random(#candidatos)]
+		return tile.x * TILE_SIZE + math.random(0, TILE_SIZE - 1),
+			tile.z * TILE_SIZE + math.random(0, TILE_SIZE - 1)
 	end
 
-	local tile = candidatos[math.random(#candidatos)]
-	local x = tile.x * TILE_SIZE + math.random(0, TILE_SIZE - 1)
-	local z = tile.z * TILE_SIZE + math.random(0, TILE_SIZE - 1)
-	return x, z
+	local angulo = math.random() * math.pi * 2
+	local distancia = MIN_DIST + math.random(0, 200)
+	return math.floor(pos.x + math.cos(angulo) * distancia),
+		math.floor(pos.z + math.sin(angulo) * distancia)
 end
 
 local function enterrar_bau(x, z, nome_jogador)
@@ -101,12 +105,6 @@ minetest.register_craftitem("garrafa_tesouro:garrafa", {
 		local nome = user:get_player_name()
 		local pos = user:get_pos()
 		local x, z = sortear_local_tesouro(nome, pos)
-
-		if not x then
-			minetest.chat_send_player(nome,
-				S("A garrafa não encontra um bom lugar... explore mais o mapa (pelo menos @1 blocos de distância daqui) e tente de novo!", MIN_DIST))
-			return itemstack
-		end
 
 		enterrar_bau(x, z, nome)
 
