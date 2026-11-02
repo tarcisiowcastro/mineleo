@@ -231,11 +231,26 @@ if minetest.get_modpath("mobs") then
 		nodes = NODES_AGUA,
 		min_light = 0,
 		max_light = 15,
-		interval = 30,
-		chance = 2000,
+		interval = 15,
+		chance = 400,
 		active_object_count = 10,
 		min_height = -50,
 		max_height = 2,
+	})
+
+	-- Povoamento imediato: dispara (uma vez por bloco) quando o jogador chega
+	-- perto de água já existente/explorada, sem precisar esperar o ciclo do
+	-- abm acima rolar sorte repetidas vezes.
+	mobs:spawn({
+		name = "pescaria:cardume",
+		nodes = NODES_AGUA,
+		min_light = 0,
+		max_light = 15,
+		chance = 2,
+		active_object_count = 10,
+		min_height = -50,
+		max_height = 2,
+		on_map_load = true,
 	})
 
 	mobs:register_mob("pescaria:predador_marinho", {
@@ -276,12 +291,74 @@ if minetest.get_modpath("mobs") then
 		nodes = NODES_AGUA,
 		min_light = 0,
 		max_light = 15,
-		interval = 45,
-		chance = 9000,
+		interval = 20,
+		chance = 1200,
 		active_object_count = 3,
 		min_height = -50,
 		max_height = 2,
 	})
+
+	mobs:spawn({
+		name = "pescaria:predador_marinho",
+		nodes = NODES_AGUA,
+		min_light = 0,
+		max_light = 15,
+		chance = 8,
+		active_object_count = 3,
+		min_height = -50,
+		max_height = 2,
+		on_map_load = true,
+	})
+
+	-- Colocar os ovos/bichos do inventário na água manualmente tem o mesmo
+	-- problema da vara: água não é "pointable" aqui, então o on_place padrão
+	-- do mobs (que exige pointed_thing.above) nunca recebe coordenada. Damos
+	-- um raycast de apoio só pros nossos próprios itens.
+	local function colocar_na_agua_com_raycast(itemstack, placer, pointed_thing, nome_mob)
+		if pointed_thing.type == "node" then
+			return nil -- já funcionou normal, deixa o mobs cuidar
+		end
+
+		local pos = agua_na_mira(placer)
+		if not pos then
+			return itemstack
+		end
+
+		local above = {x = pos.x, y = pos.y + 1, z = pos.z}
+		local smob = minetest.add_entity(above, nome_mob)
+		local ent = smob and smob:get_luaentity()
+		if not ent then
+			return itemstack
+		end
+
+		if not placer:get_player_control().sneak then
+			ent.owner = placer:get_player_name()
+			ent.tamed = true
+		end
+
+		if not mobs.is_creative(placer:get_player_name()) then
+			itemstack:take_item()
+		end
+
+		return itemstack
+	end
+
+	for _, nome_mob in ipairs({"pescaria:cardume", "pescaria:predador_marinho"}) do
+		local original = minetest.registered_items[nome_mob]
+		local original_on_place = original and original.on_place
+
+		if original_on_place then
+			minetest.override_item(nome_mob, {
+				on_place = function(itemstack, placer, pointed_thing)
+					local resultado = colocar_na_agua_com_raycast(itemstack, placer, pointed_thing, nome_mob)
+					if resultado then
+						return resultado
+					end
+					return original_on_place(itemstack, placer, pointed_thing)
+				end,
+			})
+		end
+	end
 end
 
 -- O servidor já tinha a vara de pesca do Ethereal instalada, e é ela que os
