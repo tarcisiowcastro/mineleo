@@ -42,6 +42,7 @@ local function recolher_deed(pos, clicker)
 		end
 		local inicio = minetest.deserialize(meta:get_string("inicio"))
 		local tamanho = minetest.deserialize(meta:get_string("tamanho"))
+		local deed = meta:get_string("deed")
 		if not (inicio and tamanho) then return false end
 		local fim = vector.add(inicio, {x = tamanho.x - 1, y = tamanho.y - 1, z = tamanho.z - 1})
 		for x = inicio.x, fim.x do for y = inicio.y, fim.y do for z = inicio.z, fim.z do
@@ -49,7 +50,7 @@ local function recolher_deed(pos, clicker)
 			if not minetest.is_protected(p, clicker:get_player_name()) then minetest.set_node(p, {name = "air"}) end
 		end end end
 		minetest.set_node(pos, {name = "air"})
-		local sobra = clicker:get_inventory():add_item("main", meta:get_string("deed"))
+		local sobra = clicker:get_inventory():add_item("main", deed)
 		if not sobra:is_empty() then minetest.add_item(clicker:get_pos(), sobra) end
 		minetest.chat_send_player(clicker:get_player_name(), S("Construção recolhida e transformada novamente em deed."))
 		return true
