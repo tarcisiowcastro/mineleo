@@ -20,11 +20,30 @@ local loot_bau = {
 -- Deeds reutilizáveis: colocam uma construção pronta e o marco no topo pode
 -- ser clicado pelo dono para empacotar a construção de volta no mesmo papel.
 local deeds = {
-	casa = {descricao = "Deed: Casa de Pescador", arquivo = "default_town_house_small.mts"},
-	mansao = {descricao = "Deed: Mansão Medieval", arquivo = "default_town_house_large_1.mts"},
-	torre = {descricao = "Deed: Torre de Pedra", arquivo = "default_town_tower.mts"},
-	castelo = {descricao = "Deed: Castelo", arquivo = "chateau_without_garden.mts"},
+	casa = {descricao = "Deed: Casa Pequena", tamanho = {x = 9, y = 6, z = 9}, madeira = true},
+	mansao = {descricao = "Deed: Casa Grande", tamanho = {x = 15, y = 8, z = 13}, madeira = true},
+	torre = {descricao = "Deed: Torre", tamanho = {x = 11, y = 16, z = 11}},
+	castelo = {descricao = "Deed: Castelo", tamanho = {x = 25, y = 12, z = 25}, castelo = true},
 }
+
+local function construir_estrutura(inicio, tamanho, def)
+	local parede = def.madeira and "default:wood" or "default:cobble"
+	for x = 0, tamanho.x - 1 do for z = 0, tamanho.z - 1 do
+		minetest.set_node(vector.add(inicio, {x=x,y=0,z=z}), {name="default:cobble"})
+	end end
+	for y = 1, tamanho.y - 1 do for x = 0, tamanho.x - 1 do for z = 0, tamanho.z - 1 do
+		if x == 0 or z == 0 or x == tamanho.x - 1 or z == tamanho.z - 1 then
+			if not (z == 0 and x == math.floor(tamanho.x / 2) and y <= 2) then
+				minetest.set_node(vector.add(inicio, {x=x,y=y,z=z}), {name=parede})
+			end
+		end
+	end end end
+	for x = 0, tamanho.x - 1 do for z = 0, tamanho.z - 1 do
+		if def.castelo and (x % 3 == 0 or z % 3 == 0) then
+			minetest.set_node(vector.add(inicio, {x=x,y=tamanho.y,z=z}), {name="default:cobble"})
+		elseif not def.castelo then minetest.set_node(vector.add(inicio, {x=x,y=tamanho.y,z=z}), {name="default:wood"}) end
+	end end
+end
 
 minetest.register_node("garrafa_tesouro:marco_deed", {
 	description = S("Marco de Deed (clique para recolher a construção)"),
@@ -87,23 +106,15 @@ for nome, def in pairs(deeds) do
 		stack_max = 1,
 		on_place = function(itemstack, placer, pointed_thing)
 			if not (placer and placer:is_player() and pointed_thing and pointed_thing.above) then return itemstack end
-			local caminho = minetest.get_modpath("mg_villages")
-			if not caminho then return itemstack end
-			caminho = caminho .. "/schems/" .. def.arquivo
-			local esquema = minetest.read_schematic(caminho, {})
-			if not (esquema and esquema.size) then
-				minetest.chat_send_player(placer:get_player_name(), S("Este deed ainda está sendo preparado."))
-				return itemstack
-			end
 			local inicio = vector.new(pointed_thing.above)
 			if minetest.is_protected(inicio, placer:get_player_name()) then return itemstack end
-			minetest.place_schematic(inicio, caminho, "0", nil, false)
-			local marco = vector.add(inicio, {x = math.floor(esquema.size.x / 2), y = esquema.size.y, z = math.floor(esquema.size.z / 2)})
+			construir_estrutura(inicio, def.tamanho, def)
+			local marco = vector.add(inicio, {x = math.floor(def.tamanho.x / 2), y = def.tamanho.y + 1, z = math.floor(def.tamanho.z / 2)})
 			minetest.set_node(marco, {name = "garrafa_tesouro:marco_deed"})
 			local meta = minetest.get_meta(marco)
 			meta:set_string("owner", placer:get_player_name())
 			meta:set_string("inicio", minetest.serialize(inicio))
-			meta:set_string("tamanho", minetest.serialize(esquema.size))
+			meta:set_string("tamanho", minetest.serialize(def.tamanho))
 			meta:set_string("deed", "garrafa_tesouro:deed_" .. nome)
 			itemstack:take_item()
 			return itemstack
