@@ -220,24 +220,54 @@ local function mostrar_catalogo(nome, pagina)
 		local def = por_id[(catalogo[primeiro+i] or castelos[primeiro+i-#catalogo]) and (catalogo[primeiro+i] or castelos[primeiro+i-#catalogo]).id]
 		if def then
 			local x,y = (i%3)*4, 0.9+math.floor(i/3)*1.7
-			-- Prévia visual da construção no próprio botão do catálogo. As casas
-			-- usam uma miniatura isométrica; os nomes continuam identificando cada
-			-- esquema específico que será entregue como deed.
-			formspec[#formspec+1] = string.format("image[%0.1f,%0.1f;1.35,1.35;garrafa_tesouro_preview_casa.png]", x+.1,y-.1)
-			formspec[#formspec+1] = string.format("button[%0.1f,%0.1f;2.65,0.7;pegar_%s;%s]",x+1.35,y,def.id,minetest.formspec_escape(def.nome))
-			formspec[#formspec+1] = string.format("label[%0.1f,%0.1f;%s]",x+1.35,y+.75,minetest.formspec_escape(def.grupo or "Castelos"))
+			formspec[#formspec+1] = string.format("button[%0.1f,%0.1f;2.55,0.7;ver_%s;Ver prévia]",x+.1,y,def.id)
+			formspec[#formspec+1] = string.format("button[%0.1f,%0.1f;1.25,0.7;pegar_%s;Pegar]",x+2.7,y,def.id)
+			formspec[#formspec+1] = string.format("label[%0.1f,%0.1f;%s]",x+.1,y+.75,minetest.formspec_escape(def.nome))
 		end
 	end
 	formspec[#formspec+1] = "button[0.4,8.2;2,0.6;anterior;< Anterior]button[2.6,8.2;2,0.6;proxima;Próxima >]button_exit[9.2,8.2;2,0.6;sair;Fechar]"
 	minetest.show_formspec(nome, "garrafa_tesouro:catalogo", table.concat(formspec))
 end
 
+-- Renderiza a fachada real do arquivo .mts selecionado usando as texturas dos
+-- próprios nós. Isto não é um ícone genérico: cada deed lê sua construção.
+local previews_deed = {}
+local function mostrar_previa(nome, def)
+	if def.castelo then
+		return minetest.show_formspec(nome, "garrafa_tesouro:preview_"..def.id,
+			"formspec_version[4]size[12,9]label[0.4,0.4;"..minetest.formspec_escape(def.nome).."]"..
+			"image[2.0,1.0;8,6;garrafa_tesouro_preview_casa.png]"..
+			"label[0.7,7.3;Castelo estrutural: muralhas, quatro torres, portão, pátio e torre central.]"..
+			"button[3.4,8;2.4,0.7;pegar_"..def.id..";Pegar deed]button[6.1,8;2.4,0.7;voltar;Voltar]")
+	end
+	if not (handle_schematics and handle_schematics.analyze_mts_file and build_chest and build_chest.preview_image_create_views) then
+		return minetest.chat_send_player(nome, S("O renderizador de prévias não foi carregado; tente novamente após reiniciar o servidor."))
+	end
+	local chave = "garrafa_tesouro_" .. def.id
+	if not previews_deed[chave] then
+		local caminho = schem_path .. def.arquivo:gsub("%.mts$", "")
+		local dados = handle_schematics.analyze_mts_file(caminho)
+		if not dados then return minetest.chat_send_player(nome, S("Não foi possível ler a estrutura deste deed.")) end
+		dados.yoff = 0
+		dados.preview = build_chest.preview_image_create_views(dados)
+		build_chest.building = build_chest.building or {}
+		build_chest.building[chave] = dados
+		previews_deed[chave] = true
+	end
+	local imagem = build_chest.preview_image_formspec(chave, {}, "front")
+	minetest.show_formspec(nome, "garrafa_tesouro:preview_"..def.id,
+		"formspec_version[4]size[12,11]label[0.4,0.3;"..minetest.formspec_escape(def.nome).." — prévia da estrutura real]"..
+		imagem.."button[3.3,10.1;2.4,0.7;pegar_"..def.id..";Pegar deed]button[6.2,10.1;2.4,0.7;voltar;Voltar]")
+end
+
 minetest.register_on_player_receive_fields(function(player, formname, fields)
-	if formname ~= "garrafa_tesouro:catalogo" then return end
+	if formname ~= "garrafa_tesouro:catalogo" and not formname:find("^garrafa_tesouro:preview_") then return end
 	local nome = player:get_player_name()
 	if not minetest.check_player_privs(nome, {give=true}) then return true end
+	if fields.voltar then return mostrar_catalogo(nome, pagina_catalogo[nome] or 1) end
 	if fields.anterior then return mostrar_catalogo(nome, (pagina_catalogo[nome] or 1)-1) end
 	if fields.proxima then return mostrar_catalogo(nome, (pagina_catalogo[nome] or 1)+1) end
+	for id, def in pairs(por_id) do if fields["ver_"..id] then mostrar_previa(nome, def); return true end end
 	for id in pairs(por_id) do if fields["pegar_"..id] then
 		local sobra = player:get_inventory():add_item("main", "garrafa_tesouro:deed_"..id)
 		if not sobra:is_empty() then minetest.add_item(player:get_pos(), sobra) end
