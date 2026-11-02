@@ -3,9 +3,9 @@
 -- naquele ponto.
 local S = minetest.get_translator("garrafa_tesouro")
 
-local MIN_DIST = 500 -- distância mínima do jogador, em blocos
+local MIN_DIST = 64 -- distância mínima no mesmo planeta, em blocos
+local MAX_DIST = 180
 local PROFUNDIDADE = 6
-local TILE_SIZE = 128 -- precisa casar com persistent_map.tile_size (discovery_maps/init.lua)
 
 local loot_bau = {
 	"default:gold_ingot 6",
@@ -18,59 +18,28 @@ local loot_bau = {
 	"pescaria:peixe_lendario 1",
 }
 
--- Só sorteia entre tiles que o PRÓPRIO jogador já descobriu no mapa (discovery_maps),
--- e que estejam a pelo menos MIN_DIST blocos de onde ele está agora.
-local function tiles_descobertos_distantes(nome_jogador, pos)
-	local candidatos = {}
-	if not (persistent_map and persistent_map.get_player_data) then
-		return candidatos
-	end
-
-	local pdata = persistent_map.get_player_data(nome_jogador)
-	if not (pdata and pdata.discovered_tiles) then
-		return candidatos
-	end
-
-	for _, tile in pairs(pdata.discovered_tiles) do
-		local centro_x = tile.x * TILE_SIZE + TILE_SIZE / 2
-		local centro_z = tile.z * TILE_SIZE + TILE_SIZE / 2
-		local dist = math.sqrt((centro_x - pos.x) ^ 2 + (centro_z - pos.z) ^ 2)
-		if dist >= MIN_DIST then
-			table.insert(candidatos, tile)
-		end
-	end
-
-	return candidatos
-end
-
--- Retorna sempre um ponto para o tesouro. Quando ainda não há uma região
--- distante descoberta, cria o destino numa direção aleatória: o mapa da
--- garrafa continua funcionando para quem acabou de começar a explorar.
-local function sortear_local_tesouro(nome_jogador, pos)
-	local candidatos = tiles_descobertos_distantes(nome_jogador, pos)
-	if #candidatos > 0 then
-		local tile = candidatos[math.random(#candidatos)]
-		return tile.x * TILE_SIZE + math.random(0, TILE_SIZE - 1),
-			tile.z * TILE_SIZE + math.random(0, TILE_SIZE - 1)
-	end
-
+-- Os planetas ocupam faixas diferentes de Y, mas o discovery_maps é 2D. O
+-- tesouro é sempre escolhido perto do jogador em X/Z e sua altura é resolvida
+-- depois a partir do plano onde a garrafa foi aberta.
+local function sortear_local_tesouro(pos)
 	local angulo = math.random() * math.pi * 2
-	local distancia = MIN_DIST + math.random(0, 200)
+	local distancia = math.random(MIN_DIST, MAX_DIST)
 	return math.floor(pos.x + math.cos(angulo) * distancia),
 		math.floor(pos.z + math.sin(angulo) * distancia)
 end
 
-local function enterrar_bau(x, z, nome_jogador)
-	local minp = {x = x - 1, y = -60, z = z - 1}
-	local maxp = {x = x + 1, y = 150, z = z + 1}
+local function enterrar_bau(x, z, y_referencia, nome_jogador)
+	local minp = {x = x - 1, y = y_referencia - 160, z = z - 1}
+	local maxp = {x = x + 1, y = y_referencia + 96, z = z + 1}
 
 	minetest.emerge_area(minp, maxp, function(_, _, calls_remaining)
 		if calls_remaining > 0 then return end
 
 		local superficie_y
-		for y = 140, -50, -1 do
+		for y = y_referencia + 96, y_referencia - 160, -1 do
 			local n = minetest.get_node({x = x, y = y, z = z})
-			if n.name ~= "air" and n.name ~= "ignore" then
+			local def = minetest.registered_nodes[n.name]
+			if n.name ~= "ignore" and def and def.walkable then
 				superficie_y = y
 				break
 			end
@@ -104,19 +73,19 @@ minetest.register_craftitem("garrafa_tesouro:garrafa", {
 		if not (user and user:is_player()) then return end
 		local nome = user:get_player_name()
 		local pos = user:get_pos()
-		local x, z = sortear_local_tesouro(nome, pos)
+		local x, z = sortear_local_tesouro(pos)
 
-		enterrar_bau(x, z, nome)
+		enterrar_bau(x, z, pos.y, nome)
 
 		if persistent_map and persistent_map.add_marker_for_player then
-			persistent_map.add_marker_for_player(nome, {x = x, y = 0, z = z}, S("Tesouro Pirata"), 6)
+			persistent_map.add_marker_for_player(nome, {x = x, y = pos.y, z = z}, S("Tesouro Pirata"), 6)
 			persistent_map.show_map(nome)
 		else
 			minetest.chat_send_player(nome, S("Tesouro marcado em X=@1 Z=@2 (instale discovery_maps para ver no mapa)", x, z))
 		end
 
 		minetest.chat_send_player(nome,
-			S("A garrafa revela um mapa antigo! Vá até o local marcado e cave cerca de @1 blocos abaixo da superfície.", PROFUNDIDADE))
+			S("A garrafa revela um mapa antigo no mesmo planeta! Vá até o local marcado e cave cerca de @1 blocos abaixo da superfície.", PROFUNDIDADE))
 		minetest.sound_play("default_glass_footstep",
 			{pos = pos, gain = 0.5, max_hear_distance = 8}, true)
 
