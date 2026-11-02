@@ -79,8 +79,15 @@ O servidor vem com mods de animais e barco, buscados via `scripts/install-mods.s
   Fixado na release 0.68e via zip (não `git clone`), porque o HEAD atual do
   repo já exige Luanti 5.12+ e este servidor roda 5.6.1.
 - **`river_flow`** (mod próprio deste repo, não é de terceiros) — aumenta o
-  alcance de propagação da água de rio de 2 pra 8 blocos (o máximo que o
-  engine permite; não existe "infinito" de verdade).
+  alcance da água e equaliza reservatórios conectados: ao abrir um túnel, a
+  água se redistribui até as superfícies ficarem no mesmo nível. O mar atua
+  como um reservatório na altura da sua superfície.
+- **Escrituras de casas** (`garrafa_tesouro`) — cada casa recebe uma placa
+  pequena acima da entrada. Ela mostra proprietário e data de construção;
+  o dono também pode autorizar moradores, recolher a construção para a
+  escritura, girá-la ou movê-la. Novas casas não podem invadir a distância de
+  segurança de outra casa já registrada. Um marcador amarelo flutua cinco
+  blocos acima de cada casa para localizá-la e abrir o mesmo painel.
 - **[Travelnet](https://content.luanti.org/packages/mt-mods/travelnet/)** (+
   dependência **[xcompat](https://content.luanti.org/packages/mt-mods/xcompat/)**) —
   portal entre dois pontos: crafta a caixa (vidro nas colunas laterais, aço +

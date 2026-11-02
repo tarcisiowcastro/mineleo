@@ -6,6 +6,49 @@ local S = minetest.get_translator("garrafa_tesouro")
 local MIN_DIST = 64 -- distância mínima no mesmo planeta, em blocos
 local MAX_DIST = 180
 local PROFUNDIDADE = 3
+local HOUSE_GAP = 2
+local storage = minetest.get_mod_storage()
+local houses = minetest.deserialize(storage:get_string("houses")) or {}
+local forms_open = {}
+
+local function save_houses()
+	storage:set_string("houses", minetest.serialize(houses))
+end
+
+local function house_id(pos)
+	return minetest.pos_to_string(pos)
+end
+
+local function rotated_size(size, rotation)
+	if rotation == "90" or rotation == "270" then
+		return {x = size.z, y = size.y, z = size.x}
+	end
+	return vector.new(size)
+end
+
+local function house_bounds(start, size, rotation)
+	local actual = rotated_size(size, rotation or "0")
+	return vector.new(start), vector.add(start, {x = actual.x - 1, y = actual.y + 1, z = actual.z - 1})
+end
+
+local function overlaps(a1, a2, b1, b2)
+	return a1.x <= b2.x and a2.x >= b1.x
+		and a1.y <= b2.y and a2.y >= b1.y
+		and a1.z <= b2.z and a2.z >= b1.z
+end
+
+local function house_collision(start, size, rotation, ignored_id)
+	local p1, p2 = house_bounds(start, size, rotation)
+	p1 = vector.subtract(p1, HOUSE_GAP)
+	p2 = vector.add(p2, HOUSE_GAP)
+	for id, house in pairs(houses) do
+		if id ~= ignored_id and house.start and house.size then
+			local h1, h2 = house_bounds(house.start, house.size, house.rotation)
+			if overlaps(p1, p2, h1, h2) then return house end
+		end
+	end
+	return nil
+end
 
 -- Catálogo de moradias reais do pacote mg_villages. Não são caixas geradas:
 -- cada uma é o esquema completo usado pelas vilas do próprio mundo.
@@ -117,11 +160,17 @@ end
 
 -- Castelos originais: muralha com ameias, quatro torres, portão, pátio e torre
 -- de menagem. Eles usam a ideia medieval geral, sem reproduzir plantas de outros jogos.
-local function construir_castelo(inicio, tamanho, estilo)
+local function construir_castelo(inicio, tamanho, estilo, rotation)
 	-- Este jogo não registra default:stonebrick; usar stone/cobble evita nós
 	-- desconhecidos e mantém a leitura de muralha medieval.
 	local pedra, tijolo, madeira = "default:cobble", "default:stone", "default:wood"
-	local function colocar(x,y,z,n) minetest.set_node(vector.add(inicio,{x=x,y=y,z=z}), {name=n}) end
+	local function colocar(x,y,z,n)
+		local rx, rz = x, z
+		if rotation == "90" then rx, rz = tamanho.z - 1 - z, x
+		elseif rotation == "180" then rx, rz = tamanho.x - 1 - x, tamanho.z - 1 - z
+		elseif rotation == "270" then rx, rz = z, tamanho.x - 1 - x end
+		minetest.set_node(vector.add(inicio,{x=rx,y=y,z=rz}), {name=n})
+	end
 	local function parede(x,z)
 		for y=0,tamanho.y-7 do colocar(x,y,z,pedra) end
 		for y=tamanho.y-6,tamanho.y-4 do if (x+z+y)%2==0 then colocar(x,y,z,tijolo) end end
@@ -181,35 +230,167 @@ minetest.register_node("garrafa_tesouro:marco_deed", {
 	drop = "",
 })
 
+local MARKER_NODE = minetest.registered_nodes["building_sign:building_marker"]
+	and "building_sign:building_marker" or "garrafa_tesouro:marco_deed"
+local place_beacon
+
+local function update_area_access(house)
+	if not areas or not house.area_id or not areas.areas[house.area_id] then return end
+	for _, id in ipairs(house.guest_area_ids or {}) do
+		if areas.areas[id] then areas:remove(id) end
+	end
+	house.guest_area_ids = {}
+	for _, guest in ipairs(house.guests or {}) do
+		local id = areas:add(guest, "Acesso à casa de " .. house.owner,
+			house.start, house.finish, house.area_id)
+		table.insert(house.guest_area_ids, id)
+	end
+	areas:save()
+end
+
+local function add_house_area(house)
+	if not areas then return end
+	house.area_id = areas:add(house.owner, "Casa de " .. house.owner,
+		house.start, house.finish, nil)
+	update_area_access(house)
+	areas:save()
+end
+
+local function remove_house_area(house)
+	if areas and house.area_id and areas.areas[house.area_id] then
+		areas:remove(house.area_id, true)
+		areas:save()
+	end
+end
+
+local function marker_position(start, size, rotation)
+	local actual = rotated_size(size, rotation or "0")
+	return vector.add(start, {x = math.floor(actual.x / 2), y = 1, z = 0})
+end
+
+local function beacon_position(house)
+	local actual = rotated_size(house.size, house.rotation or "0")
+	return {x = house.start.x + math.floor(actual.x / 2), y = house.finish.y + 5,
+		z = house.start.z + math.floor(actual.z / 2)}
+end
+
+local function place_marker(house)
+	local pos = marker_position(house.start, house.size, house.rotation)
+	minetest.set_node(pos, {name = MARKER_NODE, param2 = 4})
+	local meta = minetest.get_meta(pos)
+	meta:set_string("house_id", house.id)
+	meta:set_string("owner", house.owner)
+	meta:set_string("inicio", minetest.serialize(house.start))
+	meta:set_string("tamanho", minetest.serialize(house.size))
+	meta:set_string("deed", house.deed)
+	meta:set_string("infotext", "Casa de " .. house.owner .. " — clique para informações")
+	if place_beacon then place_beacon(house) end
+	return pos
+end
+
+local function users_from_text(text)
+	local users, known = {}, {}
+	for name in (text or ""):gmatch("[^,%s;]+") do
+		if not known[name] then known[name] = true; table.insert(users, name) end
+	end
+	return users
+end
+
+local function house_form(player, pos, house)
+	local owner = player:get_player_name() == house.owner
+	local guests = table.concat(house.guests or {}, ", ")
+	local built = os.date("%d/%m/%Y %H:%M", house.built_at or os.time())
+	local formspec = "formspec_version[4]size[10,8]" ..
+		"label[0.5,0.5;Casa: " .. minetest.formspec_escape(house.name or "") .. "]" ..
+		"label[0.5,1.1;Dono: " .. minetest.formspec_escape(house.owner) .. "]" ..
+		"label[0.5,1.6;Construída em: " .. built .. "]" ..
+		"label[0.5,2.1;Moradores autorizados: " .. minetest.formspec_escape(guests ~= "" and guests or "ninguém além do dono") .. "]"
+	if owner then
+		formspec = formspec .. "field[0.5,3.2;9,0.8;guests;Usuários que podem entrar (separe por vírgulas);" .. minetest.formspec_escape(guests) .. "]" ..
+			"button[0.5,4;2.2,0.8;save_guests;Salvar acessos]" ..
+			"button[2.9,4;2.2,0.8;collect;Voltar a escritura]" ..
+			"button[5.3,4;1.8,0.8;rotate_left;Girar ←]button[7.2,4;1.8,0.8;rotate_right;Girar →]" ..
+			"label[0.5,5.15;Mover a casa inteira:]" ..
+			"button[0.5,5.6;1.3,0.8;move_n;Norte]button[1.9,5.6;1.3,0.8;move_s;Sul]button[3.3,5.6;1.3,0.8;move_w;Oeste]button[4.7,5.6;1.3,0.8;move_e;Leste]" ..
+			"button[6.2,5.6;1.3,0.8;move_up;Subir]button[7.6,5.6;1.3,0.8;move_down;Descer]"
+	end
+	forms_open[player:get_player_name()] = pos
+	minetest.show_formspec(player:get_player_name(), "garrafa_tesouro:house", formspec)
+end
+
 local function recolher_deed(pos, clicker)
 		local meta = minetest.get_meta(pos)
 		if meta:get_string("owner") ~= clicker:get_player_name() then
 			minetest.chat_send_player(clicker:get_player_name(), S("Somente quem colocou este deed pode recolhê-lo."))
 			return false
 		end
-		local inicio = minetest.deserialize(meta:get_string("inicio"))
-		local tamanho = minetest.deserialize(meta:get_string("tamanho"))
+		local id = meta:get_string("house_id")
+		local house = houses[id]
+		local inicio = house and house.start or minetest.deserialize(meta:get_string("inicio"))
+		local tamanho = house and house.size or minetest.deserialize(meta:get_string("tamanho"))
 		local deed = meta:get_string("deed")
 		if not (inicio and tamanho) then return false end
 		-- A área vem do esquema efetivamente colocado; inclui telhado, torres,
 		-- placa e ameias, para nunca deixar uma parte pendurada no mundo.
-		local fim = vector.add(inicio, {x = tamanho.x - 1, y = tamanho.y + 1, z = tamanho.z - 1})
+		local fim = house and house.finish or vector.add(inicio, {x = tamanho.x - 1, y = tamanho.y + 1, z = tamanho.z - 1})
 		for x = inicio.x, fim.x do for y = inicio.y, fim.y do for z = inicio.z, fim.z do
 			local p = {x = x, y = y, z = z}
-			if not minetest.is_protected(p, clicker:get_player_name()) then minetest.set_node(p, {name = "air"}) end
+			minetest.set_node(p, {name = "air"})
 		end end end
-		minetest.set_node(pos, {name = "air"})
+		if house then
+			minetest.set_node(beacon_position(house), {name = "air"})
+			remove_house_area(house)
+			houses[id] = nil
+			save_houses()
+		end
 		local sobra = clicker:get_inventory():add_item("main", deed)
 		if not sobra:is_empty() then minetest.add_item(clicker:get_pos(), sobra) end
 		minetest.chat_send_player(clicker:get_player_name(), S("Construção recolhida e transformada novamente em deed."))
 		return true
 end
 
-minetest.override_item("garrafa_tesouro:marco_deed", {
+local function marker_rightclick(pos, node, clicker)
+	local meta = minetest.get_meta(pos)
+	local house = houses[meta:get_string("house_id")]
+	if house then house_form(clicker, pos, house); return end
+	recolher_deed(pos, clicker)
+end
+
+minetest.register_node("garrafa_tesouro:house_beacon", {
+	description = S("Marcador amarelo da casa"),
+	drawtype = "plantlike",
+	tiles = {"garrafa_tesouro_house_marker_yellow.png"},
+	inventory_image = "garrafa_tesouro_house_marker_yellow.png",
+	wield_image = "garrafa_tesouro_house_marker_yellow.png",
+	visual_scale = 0.75,
+	paramtype = "light",
+	sunlight_propagates = true,
+	walkable = false,
+	buildable_to = true,
+	groups = {not_in_creative_inventory = 1},
+	drop = "",
 	on_rightclick = function(pos, node, clicker)
-		recolher_deed(pos, clicker)
+		local house = houses[minetest.get_meta(pos):get_string("house_id")]
+		if house then house_form(clicker, pos, house) end
 	end,
 })
+
+place_beacon = function(house)
+	local pos = beacon_position(house)
+	minetest.set_node(pos, {name = "garrafa_tesouro:house_beacon"})
+	minetest.get_meta(pos):set_string("house_id", house.id)
+end
+
+minetest.override_item("garrafa_tesouro:marco_deed", {on_rightclick = marker_rightclick})
+if MARKER_NODE == "building_sign:building_marker" then
+	local original = minetest.registered_nodes[MARKER_NODE].on_rightclick
+	minetest.override_item(MARKER_NODE, {on_rightclick = function(pos, node, clicker, itemstack, pointed_thing)
+		if minetest.get_meta(pos):get_string("house_id") ~= "" then
+			return marker_rightclick(pos, node, clicker)
+		end
+		if original then return original(pos, node, clicker, itemstack, pointed_thing) end
+	end})
+end
 
 minetest.register_chatcommand("recolher_deed", {
 	description = S("Recolhe a construção do deed mais próxima"),
@@ -219,7 +400,7 @@ minetest.register_chatcommand("recolher_deed", {
 		local pos = jogador:get_pos()
 		local raio = 96
 		local marcos = minetest.find_nodes_in_area(
-			vector.subtract(pos, raio), vector.add(pos, raio), {"garrafa_tesouro:marco_deed"})
+			vector.subtract(pos, raio), vector.add(pos, raio), {MARKER_NODE, "garrafa_tesouro:marco_deed"})
 		local mais_perto
 		for _, marco in ipairs(marcos) do
 			if not mais_perto or vector.distance(pos, marco) < vector.distance(pos, mais_perto) then mais_perto = marco end
@@ -237,26 +418,118 @@ local function colocar_deed(itemstack, placer, pointed_thing, def)
 		minetest.chat_send_player(dono, S("Este esquema não está disponível neste servidor."))
 		return itemstack
 	end
-	local fim = vector.add(inicio, {x=tamanho.x-1,y=tamanho.y,z=tamanho.z-1})
+	local rotation = "0"
+	local _, fim = house_bounds(inicio, tamanho, rotation)
 	if minetest.is_protected(inicio, dono) or minetest.is_protected(fim, dono) then return itemstack end
-	if def.castelo and def.estilo ~= "esquema" then
-		construir_castelo(inicio, tamanho, def.estilo)
-	else
-		minetest.place_schematic(inicio, schem_path .. def.arquivo, "0", substituicoes_para(def), true)
+	if house_collision(inicio, tamanho, rotation) then
+		minetest.chat_send_player(dono, S("Não há espaço: deixe pelo menos @1 blocos livres entre as casas.", HOUSE_GAP))
+		return itemstack
 	end
-	-- A placa fica junto à entrada, não escondida no teto: ela mostra o dono e
-	-- também é o ponto físico para recolher a construção ao mesmo deed.
-	local placa = vector.add(inicio, {x=math.floor(tamanho.x/2), y=1, z=0})
-	minetest.set_node(placa, {name = "garrafa_tesouro:marco_deed"})
-	local meta = minetest.get_meta(placa)
-	meta:set_string("owner", dono)
-	meta:set_string("inicio", minetest.serialize(inicio))
-	meta:set_string("tamanho", minetest.serialize(tamanho))
-	meta:set_string("deed", "garrafa_tesouro:deed_" .. def.id)
-	meta:set_string("infotext", S("Propriedade de @1 — @2\nClique para recolher o deed", dono, def.nome))
+	if def.castelo and def.estilo ~= "esquema" then
+		construir_castelo(inicio, tamanho, def.estilo, rotation)
+	else
+		minetest.place_schematic(inicio, schem_path .. def.arquivo, rotation, substituicoes_para(def), true)
+	end
+	local id = house_id(inicio)
+	local house = {id=id, owner=dono, start=inicio, size=tamanho, rotation=rotation,
+		finish=fim, deed="garrafa_tesouro:deed_" .. def.id, def_id=def.id, name=def.nome,
+		built_at=os.time(), guests={}}
+	houses[id] = house
+	add_house_area(house)
+	place_marker(house)
+	save_houses()
 	itemstack:take_item()
 	return itemstack
 end
+
+local rotations = { ["0"] = 1, ["90"] = 2, ["180"] = 3, ["270"] = 4 }
+local rotation_values = {"0", "90", "180", "270"}
+
+local function rebuild_house(house, new_start, new_rotation, player)
+	if house_collision(new_start, house.size, new_rotation, house.id) then
+		minetest.chat_send_player(player:get_player_name(), S("Não há espaço suficiente entre esta e outra casa."))
+		return false
+	end
+	local def = por_id[house.def_id]
+	if not def then return false end
+	local _, new_finish = house_bounds(new_start, house.size, new_rotation)
+	if minetest.is_protected(new_start, player:get_player_name())
+		or minetest.is_protected(new_finish, player:get_player_name()) then
+		minetest.chat_send_player(player:get_player_name(), S("A nova posição está protegida."))
+		return false
+	end
+	minetest.set_node(beacon_position(house), {name="air"})
+	for x = house.start.x, house.finish.x do for y = house.start.y, house.finish.y do for z = house.start.z, house.finish.z do
+		minetest.set_node({x=x, y=y, z=z}, {name="air"})
+	end end end
+	if def.castelo and def.estilo ~= "esquema" then
+		construir_castelo(new_start, house.size, def.estilo, new_rotation)
+	else
+		minetest.place_schematic(new_start, schem_path .. def.arquivo, new_rotation, substituicoes_para(def), true)
+	end
+	remove_house_area(house)
+	house.start, house.finish, house.rotation = vector.new(new_start), new_finish, new_rotation
+	add_house_area(house)
+	place_marker(house)
+	save_houses()
+	return true
+end
+
+minetest.register_on_player_receive_fields(function(player, formname, fields)
+	if formname ~= "garrafa_tesouro:house" then return end
+	local pos = forms_open[player:get_player_name()]
+	forms_open[player:get_player_name()] = nil
+	if not pos then return true end
+	local house = houses[minetest.get_meta(pos):get_string("house_id")]
+	if not house or player:get_player_name() ~= house.owner then return true end
+	if fields.save_guests then
+		house.guests = users_from_text(fields.guests)
+		update_area_access(house)
+		save_houses()
+		minetest.chat_send_player(player:get_player_name(), S("Acessos da casa atualizados."))
+	elseif fields.collect then
+		recolher_deed(pos, player)
+	elseif fields.rotate_left or fields.rotate_right then
+		local current = rotations[house.rotation or "0"] or 1
+		local delta = fields.rotate_left and -1 or 1
+		local next_index = ((current - 1 + delta) % #rotation_values) + 1
+		rebuild_house(house, house.start, rotation_values[next_index], player)
+	else
+		local moves = {
+			move_n={x=0,y=0,z=-1}, move_s={x=0,y=0,z=1}, move_w={x=-1,y=0,z=0},
+			move_e={x=1,y=0,z=0}, move_up={x=0,y=1,z=0}, move_down={x=0,y=-1,z=0},
+		}
+		for field, offset in pairs(moves) do
+			if fields[field] then rebuild_house(house, vector.add(house.start, offset), house.rotation, player); break end
+		end
+	end
+	return true
+end)
+
+-- Existing large deed stones are transparently upgraded when their mapblock
+-- loads. New houses always use the small marker_desc sign above the doorway.
+minetest.register_lbm({
+	name = "garrafa_tesouro:upgrade_deed_marker",
+	nodenames = {"garrafa_tesouro:marco_deed", "building_sign:building_marker"}, run_at_every_load = false,
+	action = function(pos, node)
+		local meta = minetest.get_meta(pos)
+		local known = houses[meta:get_string("house_id")]
+		if known then place_beacon(known); return end
+		local start, size = minetest.deserialize(meta:get_string("inicio")), minetest.deserialize(meta:get_string("tamanho"))
+		if not (start and size) then return end
+		local id = house_id(start)
+		local _, finish = house_bounds(start, size, "0")
+		local deed = meta:get_string("deed")
+		local def_id = deed:match("garrafa_tesouro:deed_(.+)$")
+		local house = {id=id, owner=meta:get_string("owner"), start=start, size=size, rotation="0", finish=finish,
+			deed=deed, def_id=def_id, name=(por_id[def_id] and por_id[def_id].nome) or "Casa", built_at=os.time(), guests={}}
+		houses[id] = house
+		add_house_area(house)
+		minetest.set_node(pos, {name=MARKER_NODE, param2=4})
+		place_marker(house)
+		save_houses()
+	end,
+})
 
 for _, def in ipairs(catalogo) do
 	minetest.register_craftitem("garrafa_tesouro:deed_" .. def.id, {
