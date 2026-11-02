@@ -11,6 +11,16 @@ local storage = minetest.get_mod_storage()
 local houses = minetest.deserialize(storage:get_string("houses")) or {}
 local forms_open = {}
 
+minetest.register_privilege("house_admin", {
+	description = S("Pode administrar qualquer casa colocada por escritura"),
+	give_to_singleplayer = false,
+})
+
+local function can_manage_house(player, house)
+	return player and house and (player:get_player_name() == house.owner
+		or minetest.check_player_privs(player, {house_admin = true}))
+end
+
 local function save_houses()
 	storage:set_string("houses", minetest.serialize(houses))
 end
@@ -297,7 +307,7 @@ local function users_from_text(text)
 end
 
 local function house_form(player, pos, house)
-	local owner = player:get_player_name() == house.owner
+	local owner = can_manage_house(player, house)
 	local guests = table.concat(house.guests or {}, ", ")
 	local built = os.date("%d/%m/%Y %H:%M", house.built_at or os.time())
 	local formspec = "formspec_version[4]size[10,8]" ..
@@ -320,12 +330,19 @@ end
 
 local function recolher_deed(pos, clicker)
 		local meta = minetest.get_meta(pos)
-		if meta:get_string("owner") ~= clicker:get_player_name() then
-			minetest.chat_send_player(clicker:get_player_name(), S("Somente quem colocou este deed pode recolhê-lo."))
+		local house_id = meta:get_string("house_id")
+		local recorded_house = houses[house_id]
+		if recorded_house and not can_manage_house(clicker, recorded_house) then
+			minetest.chat_send_player(clicker:get_player_name(), S("Somente o dono ou um administrador de casas pode recolhê-lo."))
 			return false
 		end
-		local id = meta:get_string("house_id")
-		local house = houses[id]
+		local id = house_id
+		local house = recorded_house
+		if not house and meta:get_string("owner") ~= clicker:get_player_name()
+			and not minetest.check_player_privs(clicker, {house_admin = true}) then
+			minetest.chat_send_player(clicker:get_player_name(), S("Somente o dono ou um administrador de casas pode recolhê-lo."))
+			return false
+		end
 		local inicio = house and house.start or minetest.deserialize(meta:get_string("inicio"))
 		local tamanho = house and house.size or minetest.deserialize(meta:get_string("tamanho"))
 		local deed = meta:get_string("deed")
@@ -453,8 +470,9 @@ local function rebuild_house(house, new_start, new_rotation, player)
 	local def = por_id[house.def_id]
 	if not def then return false end
 	local _, new_finish = house_bounds(new_start, house.size, new_rotation)
-	if minetest.is_protected(new_start, player:get_player_name())
-		or minetest.is_protected(new_finish, player:get_player_name()) then
+	if not minetest.check_player_privs(player, {house_admin = true})
+		and (minetest.is_protected(new_start, player:get_player_name())
+		or minetest.is_protected(new_finish, player:get_player_name())) then
 		minetest.chat_send_player(player:get_player_name(), S("A nova posição está protegida."))
 		return false
 	end
@@ -481,7 +499,7 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 	forms_open[player:get_player_name()] = nil
 	if not pos then return true end
 	local house = houses[minetest.get_meta(pos):get_string("house_id")]
-	if not house or player:get_player_name() ~= house.owner then return true end
+	if not can_manage_house(player, house) then return true end
 	if fields.save_guests then
 		house.guests = users_from_text(fields.guests)
 		update_area_access(house)
