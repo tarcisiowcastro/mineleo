@@ -23,6 +23,10 @@ mods/*
 !mods/trilho_cmd/**
 !mods/piso_escorregadio
 !mods/piso_escorregadio/**
+!mods/pescaria
+!mods/pescaria/**
+!mods/garrafa_tesouro
+!mods/garrafa_tesouro/**
 *.log
 .idea/
 .vscode/
