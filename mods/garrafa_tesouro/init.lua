@@ -283,8 +283,8 @@ local function textura_no(nome)
 	if type(tile) == "table" then tile = tile.name end
 	return tile or "unknown_node.png"
 end
--- Projeção superior simplificada do arquivo MTS: cada quadrado é o bloco real
--- mais alto daquela coluna. Limitamos a 7x7 para o formspec continuar leve.
+-- Fachada frontal do arquivo MTS: a primeira face visível ao entrar pela porta.
+-- Cada quadrado vem do bloco real do esquema; limitamos a 7x7 para o formspec.
 local function miniatura_real(def, px, py)
 	if def.castelo or not (handle_schematics and handle_schematics.analyze_mts_file) then return "image["..px..","..py..";1.2,1.2;default_cobble.png]" end
 	local dados = miniaturas_esquema[def.id]
@@ -293,13 +293,13 @@ local function miniatura_real(def, px, py)
 		miniaturas_esquema[def.id] = dados or false
 	end
 	if not dados then return "image["..px..","..py..";1.2,1.2;default_paper.png]" end
-	local partes, nx, nz = {}, math.min(7, dados.size.x), math.min(7, dados.size.z)
-	for iz=1,nz do for ix=1,nx do
+	local partes, nx, ny = {}, math.min(7, dados.size.x), math.min(7, dados.size.y)
+	for iy=1,ny do for ix=1,nx do
 		local sx = math.min(dados.size.x, math.floor((ix-.5)*dados.size.x/nx)+1)
-		local sz = math.min(dados.size.z, math.floor((iz-.5)*dados.size.z/nz)+1)
+		local sy = math.max(1, dados.size.y-math.floor((iy-.5)*dados.size.y/ny))
 		local nome = "air"
-		for y=dados.size.y,1,-1 do local no=dados.scm_data_cache[y] and dados.scm_data_cache[y][sx] and dados.scm_data_cache[y][sx][sz]; if no and dados.nodenames[no[1]] and dados.nodenames[no[1]] ~= "air" then nome=dados.nodenames[no[1]]; break end end
-		if nome ~= "air" then partes[#partes+1] = string.format("image[%0.2f,%0.2f;%.2f,%.2f;%s]",px+(ix-1)*1.2/nx,py+(iz-1)*1.2/nz,1.2/nx+.01,1.2/nz+.01,textura_no(nome)) end
+		for z=1,dados.size.z do local no=dados.scm_data_cache[sy] and dados.scm_data_cache[sy][sx] and dados.scm_data_cache[sy][sx][z]; if no and dados.nodenames[no[1]] and dados.nodenames[no[1]] ~= "air" then nome=dados.nodenames[no[1]]; break end end
+		if nome ~= "air" then partes[#partes+1] = string.format("image[%0.2f,%0.2f;%.2f,%.2f;%s]",px+(ix-1)*1.2/nx,py+(iy-1)*1.2/ny,1.2/nx+.01,1.2/ny+.01,textura_no(nome)) end
 	end end
 	return table.concat(partes)
 end
