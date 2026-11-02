@@ -30,16 +30,19 @@ minetest.register_node("garrafa_tesouro:marco_deed", {
 	description = S("Marco de Deed (clique para recolher a construção)"),
 	tiles = {"default_gold_block.png^[colorize:#5B2C6F:100"},
 	groups = {cracky = 1, not_in_creative_inventory = 1},
+	light_source = 8,
 	drop = "",
-	on_rightclick = function(pos, node, clicker)
+})
+
+local function recolher_deed(pos, clicker)
 		local meta = minetest.get_meta(pos)
 		if meta:get_string("owner") ~= clicker:get_player_name() then
 			minetest.chat_send_player(clicker:get_player_name(), S("Somente quem colocou este deed pode recolhê-lo."))
-			return
+			return false
 		end
 		local inicio = minetest.deserialize(meta:get_string("inicio"))
 		local tamanho = minetest.deserialize(meta:get_string("tamanho"))
-		if not (inicio and tamanho) then return end
+		if not (inicio and tamanho) then return false end
 		local fim = vector.add(inicio, {x = tamanho.x - 1, y = tamanho.y - 1, z = tamanho.z - 1})
 		for x = inicio.x, fim.x do for y = inicio.y, fim.y do for z = inicio.z, fim.z do
 			local p = {x = x, y = y, z = z}
@@ -49,6 +52,30 @@ minetest.register_node("garrafa_tesouro:marco_deed", {
 		local sobra = clicker:get_inventory():add_item("main", meta:get_string("deed"))
 		if not sobra:is_empty() then minetest.add_item(clicker:get_pos(), sobra) end
 		minetest.chat_send_player(clicker:get_player_name(), S("Construção recolhida e transformada novamente em deed."))
+		return true
+end
+
+minetest.override_item("garrafa_tesouro:marco_deed", {
+	on_rightclick = function(pos, node, clicker)
+		recolher_deed(pos, clicker)
+	end,
+})
+
+minetest.register_chatcommand("recolher_deed", {
+	description = S("Recolhe a construção do deed mais próxima"),
+	func = function(nome)
+		local jogador = minetest.get_player_by_name(nome)
+		if not jogador then return false end
+		local pos = jogador:get_pos()
+		local raio = 96
+		local marcos = minetest.find_nodes_in_area(
+			vector.subtract(pos, raio), vector.add(pos, raio), {"garrafa_tesouro:marco_deed"})
+		local mais_perto
+		for _, marco in ipairs(marcos) do
+			if not mais_perto or vector.distance(pos, marco) < vector.distance(pos, mais_perto) then mais_perto = marco end
+		end
+		if not mais_perto then return false, S("Nenhum deed foi encontrado por perto.") end
+		return recolher_deed(mais_perto, jogador), S("Deed recolhido.")
 	end,
 })
 
@@ -70,7 +97,7 @@ for nome, def in pairs(deeds) do
 			local inicio = vector.new(pointed_thing.above)
 			if minetest.is_protected(inicio, placer:get_player_name()) then return itemstack end
 			minetest.place_schematic(inicio, caminho, "0", nil, false)
-			local marco = vector.add(inicio, {x = 0, y = esquema.size.y, z = 0})
+			local marco = vector.add(inicio, {x = math.floor(esquema.size.x / 2), y = esquema.size.y, z = math.floor(esquema.size.z / 2)})
 			minetest.set_node(marco, {name = "garrafa_tesouro:marco_deed"})
 			local meta = minetest.get_meta(marco)
 			meta:set_string("owner", placer:get_player_name())
