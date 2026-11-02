@@ -5,7 +5,7 @@ local S = minetest.get_translator("garrafa_tesouro")
 
 local MIN_DIST = 64 -- distância mínima no mesmo planeta, em blocos
 local MAX_DIST = 180
-local PROFUNDIDADE = 6
+local PROFUNDIDADE = 3
 
 local loot_bau = {
 	"default:gold_ingot 6",
