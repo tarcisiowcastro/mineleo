@@ -220,10 +220,12 @@ local function mostrar_catalogo(nome, pagina)
 		local def = por_id[(catalogo[primeiro+i] or castelos[primeiro+i-#catalogo]) and (catalogo[primeiro+i] or castelos[primeiro+i-#catalogo]).id]
 		if def then
 			local x,y = (i%3)*4, 0.9+math.floor(i/3)*1.7
-			local cor = def.castelo and "6E6E6E" or "8B5A2B"
-			formspec[#formspec+1] = string.format("image[%0.1f,%0.1f;0.8,1;default_paper.png^[colorize:#%s:100]", x+.2,y,cor)
-			formspec[#formspec+1] = string.format("button[%0.1f,%0.1f;3.0,0.7;pegar_%s;%s]",x+1,y,def.id,minetest.formspec_escape(def.nome))
-			formspec[#formspec+1] = string.format("label[%0.1f,%0.1f;%s]",x+1,y+.75,minetest.formspec_escape(def.grupo or "Castelos"))
+			-- Prévia visual da construção no próprio botão do catálogo. As casas
+			-- usam uma miniatura isométrica; os nomes continuam identificando cada
+			-- esquema específico que será entregue como deed.
+			formspec[#formspec+1] = string.format("image[%0.1f,%0.1f;1.35,1.35;garrafa_tesouro_preview_casa.png]", x+.1,y-.1)
+			formspec[#formspec+1] = string.format("button[%0.1f,%0.1f;2.65,0.7;pegar_%s;%s]",x+1.35,y,def.id,minetest.formspec_escape(def.nome))
+			formspec[#formspec+1] = string.format("label[%0.1f,%0.1f;%s]",x+1.35,y+.75,minetest.formspec_escape(def.grupo or "Castelos"))
 		end
 	end
 	formspec[#formspec+1] = "button[0.4,8.2;2,0.6;anterior;< Anterior]button[2.6,8.2;2,0.6;proxima;Próxima >]button_exit[9.2,8.2;2,0.6;sair;Fechar]"
