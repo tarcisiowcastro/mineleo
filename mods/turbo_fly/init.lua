@@ -4,7 +4,25 @@
 local TURBO_SPEED = 2.5
 local NORMAL_SPEED = 1
 
+-- pova re-applies the summed physics every second, so a raw
+-- set_physics_override would be undone; register the boost with it instead.
+local has_pova = minetest.get_modpath("pova") ~= nil
+
 local turbo_on = {}
+
+local function set_speed(player, speed)
+	if has_pova then
+		local name = player:get_player_name()
+		if speed == NORMAL_SPEED then
+			pova.del_override(name, "turbo_fly")
+		else
+			pova.add_override(name, "turbo_fly", { speed = speed - 1 })
+		end
+		pova.do_override(player)
+	else
+		player:set_physics_override({ speed = speed })
+	end
+end
 
 minetest.register_chatcommand("turbo", {
 	description = "Liga/desliga velocidade extra de voo (so pra voce, opcional)",
@@ -16,12 +34,12 @@ minetest.register_chatcommand("turbo", {
 
 		if turbo_on[name] then
 			turbo_on[name] = nil
-			player:set_physics_override({ speed = NORMAL_SPEED })
+			set_speed(player, NORMAL_SPEED)
 			return true, "Turbo desligado"
 		end
 
 		turbo_on[name] = true
-		player:set_physics_override({ speed = TURBO_SPEED })
+		set_speed(player, TURBO_SPEED)
 		return true, "Turbo ligado (velocidade x" .. TURBO_SPEED .. ")"
 	end,
 })
