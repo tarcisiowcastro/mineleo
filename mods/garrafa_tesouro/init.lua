@@ -57,7 +57,14 @@ local arquivo_catalogado = {}
 for _, d in ipairs(catalogo) do arquivo_catalogado[d.arquivo] = true end
 if schem_path and minetest.get_dir_list then
 	for _, arquivo in ipairs(minetest.get_dir_list(schem_path, false)) do
-		if arquivo:sub(-4) == ".mts" and not arquivo_catalogado[arquivo] then
+		local base = arquivo:lower()
+		-- Só moradias e edifícios habitáveis: não expor campos, bancadas, poços,
+		-- currais ou peças soltas como se fossem casas no catálogo de deeds.
+		local habitavel = base:find("house", 1, true) or base:find("cabin", 1, true)
+			or base:find("hut", 1, true) or base:find("tower", 1, true) or base:find("inn", 1, true)
+			or base:find("hotel", 1, true) or base:find("library", 1, true) or base:find("pub", 1, true)
+			or base:find("taverne", 1, true) or base:find("chateau", 1, true) or base:find("mill", 1, true)
+		if arquivo:sub(-4) == ".mts" and habitavel and not arquivo_catalogado[arquivo] then
 			local rotulo = arquivo:gsub("%.mts$", ""):gsub("[_%-]", " ")
 			local id = "vila_" .. arquivo:gsub("[^%w]", "_")
 			table.insert(catalogo, {id=id, nome="Estrutura da vila: " .. rotulo, arquivo=arquivo, grupo="Vilas"})
