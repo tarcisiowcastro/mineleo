@@ -88,6 +88,9 @@ local function agua_na_mira(user)
 end
 
 local function pescar(itemstack, user, pointed_thing)
+	minetest.log("action", "[pescaria] pescar() chamado, pointed_thing.type=" ..
+		tostring(pointed_thing and pointed_thing.type))
+
 	if not (user and user:is_player()) then return end
 
 	local meta = itemstack:get_meta()
@@ -151,6 +154,28 @@ minetest.register_tool("pescaria:vara", {
 	on_place = pescar,
 	on_secondary_use = pescar,
 	on_use = pescar,
+})
+
+-- Alternativa garantida ao clique (que depende de apontar certo pra água):
+-- /pescar funciona em qualquer direção que o jogador esteja olhando, com a
+-- vara em qualquer slot do inventário (não precisa estar na mão).
+minetest.register_chatcommand("pescar", {
+	description = S("Pesca na água pra onde você está olhando (precisa da Vara de Pesca no inventário)"),
+	func = function(nome)
+		local user = minetest.get_player_by_name(nome)
+		if not user then
+			return false, S("Jogador não encontrado")
+		end
+
+		local inv = user:get_inventory()
+		if not inv:contains_item("main", "pescaria:vara") then
+			return false, S("Você precisa ter uma Vara de Pesca no inventário")
+		end
+
+		local vara = ItemStack("pescaria:vara")
+		pescar(vara, user, {type = "nothing"})
+		return true
+	end,
 })
 
 minetest.register_craft({
