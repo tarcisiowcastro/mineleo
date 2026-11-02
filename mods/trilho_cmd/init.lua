@@ -1,6 +1,8 @@
 local MAX_LEN = 200
 local MAX_HEIGHT = 5
 local MAX_UNDO = 20
+local MAX_WIDTH = 9
+local MAX_FILL = 32
 local RAIL = "advtrains:dtrack_st"
 
 -- Historico por jogador pro /desfazer: cada entrada e uma lista de
@@ -172,9 +174,88 @@ core.register_chatcommand("replicar", {
 	end,
 })
 
--- /desfazer: volta a ultima acao de /trilho, /cavar ou /replicar (ate MAX_UNDO por jogador)
+-- Bloco inclinado do More Blocks equivalente ao da mao; nil se nao houver
+local function slope_of(node_name)
+	local mod, sub = node_name:match("^([^:]+):(.+)$")
+	if not mod then
+		return nil
+	end
+	for _, candidate in ipairs({ "moreblocks:slope_" .. sub, mod .. ":slope_" .. sub }) do
+		if core.registered_nodes[candidate] then
+			return candidate
+		end
+	end
+	return nil
+end
+
+-- So ocupa espaco livre, pra nunca sobrescrever construcao existente
+local function is_free(pos)
+	local nname = core.get_node(pos).name
+	local def = core.registered_nodes[nname]
+	return nname ~= "ignore" and def and def.buildable_to
+end
+
+-- /ladeira <quantidade> [largura]: rampa subindo na direcao do olhar, com o
+-- bloco da mao. Preenche por baixo ate o chao e pula o que ja estiver ocupado
+core.register_chatcommand("ladeira", {
+	params = "<quantidade> [largura]",
+	description = "Constroi uma ladeira com o bloco da sua mao, subindo na direcao em que voce olha",
+	privs = { server = true },
+	func = function(name, param)
+		local player = core.get_player_by_name(name)
+		if not player then
+			return false, "Jogador nao encontrado"
+		end
+		local count_s, width_s = param:match("^(%S+)%s*(%S*)$")
+		local count = parse_count(count_s)
+		if not count then
+			return false, "Uso: /ladeira <quantidade> [largura] (1 a " .. MAX_LEN .. ", largura 1 a " .. MAX_WIDTH .. ")"
+		end
+		local width = math.max(1, math.min(math.floor(tonumber(width_s or "") or 1), MAX_WIDTH))
+
+		local item = player:get_wielded_item():get_name()
+		if not core.registered_nodes[item] then
+			return false, "Segure na mao o bloco da ladeira"
+		end
+		local slope = slope_of(item)
+
+		local dir = look_dir(player)
+		local side = { x = dir.z, y = 0, z = -dir.x }
+		local param2 = core.dir_to_facedir(dir)
+		local base = vector.add(vector.round(player:get_pos()), dir)
+		local first = -math.floor((width - 1) / 2)
+		local changes = {}
+		local skipped = 0
+		for step = 0, count - 1 do
+			for offset = first, first + width - 1 do
+				local pos = vector.add(base, vector.multiply(side, offset))
+				if is_free(pos) then
+					changes[#changes + 1] = snapshot(pos)
+					core.set_node(pos, { name = slope or item, param2 = slope and param2 or 0 })
+					local below = { x = pos.x, y = pos.y - 1, z = pos.z }
+					for _ = 1, MAX_FILL do
+						if not is_free(below) then
+							break
+						end
+						changes[#changes + 1] = snapshot(below)
+						core.set_node(below, { name = item })
+						below.y = below.y - 1
+					end
+				else
+					skipped = skipped + 1
+				end
+			end
+			base = vector.add(base, { x = dir.x, y = 1, z = dir.z })
+		end
+		push_history(name, changes)
+		return true, ("Ladeira pronta: %d blocos (pulados por bloco ocupado: %d)%s"):format(
+			#changes, skipped, slope and "" or " - sem rampa pra esse bloco, ficou em degraus")
+	end,
+})
+
+-- /desfazer: volta a ultima acao de /trilho, /cavar, /replicar ou /ladeira (ate MAX_UNDO por jogador)
 core.register_chatcommand("desfazer", {
-	description = "Desfaz o ultimo /trilho, /cavar ou /replicar",
+	description = "Desfaz o ultimo /trilho, /cavar, /replicar ou /ladeira",
 	privs = { server = true },
 	func = function(name)
 		local h = history[name]

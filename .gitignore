@@ -25,6 +25,10 @@ mods/*
 !mods/piso_escorregadio/**
 !mods/multidecor_fix
 !mods/multidecor_fix/**
+!mods/pescaria
+!mods/pescaria/**
+!mods/garrafa_tesouro
+!mods/garrafa_tesouro/**
 *.log
 .idea/
 .vscode/
