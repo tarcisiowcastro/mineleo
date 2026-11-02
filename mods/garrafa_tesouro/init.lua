@@ -269,6 +269,33 @@ for _, def in ipairs(castelos) do
 end
 
 local pagina_catalogo = {}
+local miniaturas_esquema = {}
+local function textura_no(nome)
+	local def = minetest.registered_nodes[nome]
+	local tile = def and def.tiles and def.tiles[1]
+	if type(tile) == "table" then tile = tile.name end
+	return tile or "unknown_node.png"
+end
+-- Projeção superior simplificada do arquivo MTS: cada quadrado é o bloco real
+-- mais alto daquela coluna. Limitamos a 7x7 para o formspec continuar leve.
+local function miniatura_real(def, px, py)
+	if def.castelo or not (handle_schematics and handle_schematics.analyze_mts_file) then return "image["..px..","..py..";1.2,1.2;default_cobble.png]" end
+	local dados = miniaturas_esquema[def.id]
+	if not dados then
+		dados = handle_schematics.analyze_mts_file(schem_path .. def.arquivo:gsub("%.mts$", ""))
+		miniaturas_esquema[def.id] = dados or false
+	end
+	if not dados then return "image["..px..","..py..";1.2,1.2;default_paper.png]" end
+	local partes, nx, nz = {}, math.min(7, dados.size.x), math.min(7, dados.size.z)
+	for iz=1,nz do for ix=1,nx do
+		local sx = math.min(dados.size.x, math.floor((ix-.5)*dados.size.x/nx)+1)
+		local sz = math.min(dados.size.z, math.floor((iz-.5)*dados.size.z/nz)+1)
+		local nome = "air"
+		for y=dados.size.y,1,-1 do local no=dados.scm_data_cache[y] and dados.scm_data_cache[y][sx] and dados.scm_data_cache[y][sx][sz]; if no and dados.nodenames[no[1]] and dados.nodenames[no[1]] ~= "air" then nome=dados.nodenames[no[1]]; break end end
+		if nome ~= "air" then partes[#partes+1] = string.format("image[%0.2f,%0.2f;%.2f,%.2f;%s]",px+(ix-1)*1.2/nx,py+(iz-1)*1.2/nz,1.2/nx+.01,1.2/nz+.01,textura_no(nome)) end
+	end end
+	return table.concat(partes)
+end
 local function mostrar_catalogo(nome, pagina)
 	pagina = math.max(1, pagina or 1); pagina_catalogo[nome] = pagina
 	local por_pagina, primeiro = 12, (pagina-1)*12+1
@@ -277,9 +304,7 @@ local function mostrar_catalogo(nome, pagina)
 		local def = por_id[(catalogo[primeiro+i] or castelos[primeiro+i-#catalogo]) and (catalogo[primeiro+i] or castelos[primeiro+i-#catalogo]).id]
 		if def then
 			local x,y = (i%3)*4, 0.9+math.floor(i/3)*1.7
-			-- Não mostramos mais ilustrações que não correspondem à construção.
-			local imagem = def.preview or (def.castelo and "default_cobble.png" or "garrafa_tesouro_preview_casa.png")
-			formspec[#formspec+1] = string.format("image[%0.1f,%0.1f;1.3,1.3;%s]",x+.1,y-.1,imagem)
+			formspec[#formspec+1] = miniatura_real(def, x+.1, y-.1)
 			formspec[#formspec+1] = string.format("button[%0.1f,%0.1f;2.45,0.7;pegar_%s;Pegar deed]",x+1.45,y,def.id)
 			formspec[#formspec+1] = string.format("label[%0.1f,%0.1f;%s]",x+1.45,y+.75,minetest.formspec_escape(def.nome))
 		end
