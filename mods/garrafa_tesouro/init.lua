@@ -45,7 +45,7 @@ local catalogo = {
 }
 
 local castelos = {
-	{id="fortaleza", nome="Fortaleza das Quatro Torres", tamanho={x=43,y=18,z=43}, preview="garrafa_tesouro_preview_fortaleza.png", estilo="quadrado"},
+	{id="fortaleza", nome="Château Fortificado", arquivo="chateau_without_garden.mts", estilo="esquema"},
 	{id="alcazar", nome="Alcáçar do Pátio Alto", tamanho={x=55,y=22,z=47}, preview="garrafa_tesouro_preview_alcazar.png", estilo="patio"},
 	{id="cidadela", nome="Cidadela do Rei", tamanho={x=63,y=25,z=55}, preview="garrafa_tesouro_preview_cidadela.png", estilo="cidadela"},
 }
@@ -223,7 +223,7 @@ local function colocar_deed(itemstack, placer, pointed_thing, def)
 	end
 	local fim = vector.add(inicio, {x=tamanho.x-1,y=tamanho.y,z=tamanho.z-1})
 	if minetest.is_protected(inicio, dono) or minetest.is_protected(fim, dono) then return itemstack end
-	if def.castelo then
+	if def.castelo and def.estilo ~= "esquema" then
 		construir_castelo(inicio, tamanho, def.estilo)
 	else
 		minetest.place_schematic(inicio, schem_path .. def.arquivo, "0", substituicoes_para(def), true)
@@ -268,7 +268,8 @@ local function mostrar_catalogo(nome, pagina)
 		local def = por_id[(catalogo[primeiro+i] or castelos[primeiro+i-#catalogo]) and (catalogo[primeiro+i] or castelos[primeiro+i-#catalogo]).id]
 		if def then
 			local x,y = (i%3)*4, 0.9+math.floor(i/3)*1.7
-			local imagem = def.preview or "garrafa_tesouro_preview_casa.png"
+			-- Não mostramos mais ilustrações que não correspondem à construção.
+			local imagem = def.preview or (def.castelo and "default_cobble.png" or "garrafa_tesouro_preview_casa.png")
 			formspec[#formspec+1] = string.format("image[%0.1f,%0.1f;1.3,1.3;%s]",x+.1,y-.1,imagem)
 			formspec[#formspec+1] = string.format("button[%0.1f,%0.1f;2.45,0.7;pegar_%s;Pegar deed]",x+1.45,y,def.id)
 			formspec[#formspec+1] = string.format("label[%0.1f,%0.1f;%s]",x+1.45,y+.75,minetest.formspec_escape(def.nome))
