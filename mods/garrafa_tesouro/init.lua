@@ -8,15 +8,80 @@ local MAX_DIST = 180
 local PROFUNDIDADE = 3
 
 local loot_bau = {
-	"default:gold_ingot 6",
-	"default:gold_ingot 6",
-	"default:diamond 3",
-	"default:mese_crystal 6",
-	"default:mese 1",
-	"default:obsidian_shard 5",
-	"default:copper_ingot 6",
-	"pescaria:peixe_lendario 1",
+	"garrafa_tesouro:deed_casa 1",
+	"garrafa_tesouro:deed_casa 1",
+	"garrafa_tesouro:deed_mansao 1",
+	"garrafa_tesouro:deed_torre 1",
+	"garrafa_tesouro:deed_castelo 1",
+	"animalia:spawn_horse 1",
+	"animalia:spawn_horse 1",
 }
+
+-- Deeds reutilizáveis: colocam uma construção pronta e o marco no topo pode
+-- ser clicado pelo dono para empacotar a construção de volta no mesmo papel.
+local deeds = {
+	casa = {descricao = "Deed: Casa de Pescador", arquivo = "default_town_house_small.mts"},
+	mansao = {descricao = "Deed: Mansão Medieval", arquivo = "default_town_house_large_1.mts"},
+	torre = {descricao = "Deed: Torre de Pedra", arquivo = "default_town_tower.mts"},
+	castelo = {descricao = "Deed: Castelo", arquivo = "chateau_without_garden.mts"},
+}
+
+minetest.register_node("garrafa_tesouro:marco_deed", {
+	description = S("Marco de Deed (clique para recolher a construção)"),
+	tiles = {"default_gold_block.png^[colorize:#5B2C6F:100"},
+	groups = {cracky = 1, not_in_creative_inventory = 1},
+	drop = "",
+	on_rightclick = function(pos, node, clicker)
+		local meta = minetest.get_meta(pos)
+		if meta:get_string("owner") ~= clicker:get_player_name() then
+			minetest.chat_send_player(clicker:get_player_name(), S("Somente quem colocou este deed pode recolhê-lo."))
+			return
+		end
+		local inicio = minetest.deserialize(meta:get_string("inicio"))
+		local tamanho = minetest.deserialize(meta:get_string("tamanho"))
+		if not (inicio and tamanho) then return end
+		local fim = vector.add(inicio, {x = tamanho.x - 1, y = tamanho.y - 1, z = tamanho.z - 1})
+		for x = inicio.x, fim.x do for y = inicio.y, fim.y do for z = inicio.z, fim.z do
+			local p = {x = x, y = y, z = z}
+			if not minetest.is_protected(p, clicker:get_player_name()) then minetest.set_node(p, {name = "air"}) end
+		end end end
+		minetest.set_node(pos, {name = "air"})
+		local sobra = clicker:get_inventory():add_item("main", meta:get_string("deed"))
+		if not sobra:is_empty() then minetest.add_item(clicker:get_pos(), sobra) end
+		minetest.chat_send_player(clicker:get_player_name(), S("Construção recolhida e transformada novamente em deed."))
+	end,
+})
+
+for nome, def in pairs(deeds) do
+	minetest.register_craftitem("garrafa_tesouro:deed_" .. nome, {
+		description = S("@1\nColoque em terreno livre; use o marco no topo para recolher.", def.descricao),
+		inventory_image = "default_paper.png^[colorize:#6A1B9A:120",
+		stack_max = 1,
+		on_place = function(itemstack, placer, pointed_thing)
+			if not (placer and placer:is_player() and pointed_thing and pointed_thing.above) then return itemstack end
+			local caminho = minetest.get_modpath("mg_villages")
+			if not caminho then return itemstack end
+			caminho = caminho .. "/schems/" .. def.arquivo
+			local esquema = minetest.read_schematic(caminho, {})
+			if not (esquema and esquema.size) then
+				minetest.chat_send_player(placer:get_player_name(), S("Este deed ainda está sendo preparado."))
+				return itemstack
+			end
+			local inicio = vector.new(pointed_thing.above)
+			if minetest.is_protected(inicio, placer:get_player_name()) then return itemstack end
+			minetest.place_schematic(inicio, caminho, "0", nil, false)
+			local marco = vector.add(inicio, {x = 0, y = esquema.size.y, z = 0})
+			minetest.set_node(marco, {name = "garrafa_tesouro:marco_deed"})
+			local meta = minetest.get_meta(marco)
+			meta:set_string("owner", placer:get_player_name())
+			meta:set_string("inicio", minetest.serialize(inicio))
+			meta:set_string("tamanho", minetest.serialize(esquema.size))
+			meta:set_string("deed", "garrafa_tesouro:deed_" .. nome)
+			itemstack:take_item()
+			return itemstack
+		end,
+	})
+end
 
 -- Os planetas ocupam faixas diferentes de Y, mas o discovery_maps é 2D. O
 -- tesouro é sempre escolhido perto do jogador em X/Z e sua altura é resolvida
