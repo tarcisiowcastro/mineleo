@@ -565,6 +565,120 @@ minetest.register_on_leaveplayer(function(player)
 	pilot_sessions[player:get_player_name()] = nil
 end)
 
+-- Manipulador: uma ferramenta explícita evita interferir nos cliques direitos
+-- normais dos outros mods. Ela move nós simples e entidades sem depender de
+-- configuração de teclas do cliente.
+local manipulated = {}
+local function stop_manipulating(player, notice)
+	local nome, session = player:get_player_name(), manipulated[player:get_player_name()]
+	if not session then return end
+	player:set_physics_override({speed = session.speed or 1})
+	manipulated[nome] = nil
+	if notice then minetest.chat_send_player(nome, S("Manipulação encerrada.")) end
+end
+
+local function move_selected_node(player, session, offset)
+	local source, target = session.pos, vector.add(session.pos, offset)
+	if minetest.is_protected(target, player:get_player_name()) then return end
+	local target_def = minetest.registered_nodes[minetest.get_node(target).name] or {}
+	if not target_def.buildable_to then return end
+	local node = minetest.get_node(source)
+	if node.name == "air" or node.name == "ignore" then return end
+	local meta = minetest.get_meta(source):to_table()
+	minetest.set_node(target, node)
+	minetest.get_meta(target):from_table(meta)
+	minetest.set_node(source, {name = "air"})
+	session.pos = target
+end
+
+local function move_manipulated(player, session, offset)
+	if session.kind == "node" then return move_selected_node(player, session, offset) end
+	if session.object and session.object:get_pos() then
+		session.object:set_pos(vector.add(session.object:get_pos(), offset))
+	end
+end
+
+local manipulate_elapsed = 0
+minetest.register_globalstep(function(dtime)
+	manipulate_elapsed = manipulate_elapsed + dtime
+	if manipulate_elapsed < 0.25 then return end
+	manipulate_elapsed = 0
+	for nome, session in pairs(manipulated) do
+		local player = minetest.get_player_by_name(nome)
+		if not player then
+			manipulated[nome] = nil
+		else
+			local control = player:get_player_control()
+			if control.jump and control.sneak then
+				stop_manipulating(player, true)
+			elseif control.jump and (control.left or control.right) then
+				local angle = control.left and math.pi / 2 or -math.pi / 2
+				if session.kind == "node" then
+					local node = minetest.get_node(session.pos)
+					node.param2 = (node.param2 + (control.left and 1 or 3)) % 4
+					minetest.swap_node(session.pos, node)
+				elseif session.object then
+					session.object:set_yaw((session.object:get_yaw() or 0) + angle)
+				end
+			elseif control.sneak and (control.up or control.down) then
+				move_manipulated(player, session, {x = 0, y = control.up and 1 or -1, z = 0})
+			elseif control.up or control.down or control.left or control.right then
+				local offset = cardinal_from_camera(player, control.left or control.right)
+				if control.down or control.right then offset = vector.multiply(offset, -1) end
+				move_manipulated(player, session, offset)
+			end
+		end
+	end
+end)
+
+local function begin_manipulation(itemstack, player, pointed_thing)
+	if not (player and pointed_thing) then return itemstack end
+	local nome = player:get_player_name()
+	if not player:get_player_control().sneak then
+		minetest.chat_send_player(nome, S("Segure Shift e clique direito em um bloco, item ou entidade para manipular."))
+		return itemstack
+	end
+	stop_manipulating(player)
+	if pointed_thing.type == "node" then
+		local pos = pointed_thing.under
+		local house = houses[minetest.get_meta(pos):get_string("house_id")]
+		if house then
+			if not can_manage_house(player, house) then return itemstack end
+			pilot_sessions[nome] = {house_id = house.id, speed = player:get_physics_override().speed}
+			player:set_physics_override({speed = 0})
+			minetest.chat_send_player(nome, S("Casa selecionada: use o modo piloto com WASD."))
+			return itemstack
+		end
+		if minetest.is_protected(pos, nome) then return itemstack end
+		local node = minetest.get_node(pos)
+		if node.name == "air" or node.name == "ignore" then return itemstack end
+		manipulated[nome] = {kind = "node", pos = vector.new(pos), speed = player:get_physics_override().speed}
+	elseif pointed_thing.type == "object" and pointed_thing.ref then
+		manipulated[nome] = {kind = "object", object = pointed_thing.ref, speed = player:get_physics_override().speed}
+	else
+		return itemstack
+	end
+	player:set_physics_override({speed = 0})
+	minetest.chat_send_player(nome, S("Selecionado. WASD move, Espaço+A/D gira, Shift+W/S sobe ou desce; Espaço+Shift encerra."))
+	return itemstack
+end
+
+minetest.register_tool("garrafa_tesouro:manipulador", {
+	description = S("Manipulador\nShift + clique direito seleciona bloco, item, entidade ou placa de casa"),
+	inventory_image = "default_tool_steelaxe.png^[colorize:#36D95A:130",
+	on_place = begin_manipulation,
+	on_use = begin_manipulation,
+	groups = {not_in_creative_inventory = 1},
+})
+
+minetest.register_craft({
+	output = "garrafa_tesouro:manipulador",
+	recipe = {
+		{"default:steel_ingot", "default:mese_crystal_fragment"},
+		{"", "default:stick"},
+	},
+})
+
 minetest.register_on_player_receive_fields(function(player, formname, fields)
 	if formname ~= "garrafa_tesouro:house" then return end
 	local pos = forms_open[player:get_player_name()]
