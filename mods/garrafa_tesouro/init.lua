@@ -10,6 +10,7 @@ local HOUSE_GAP = 2
 local storage = minetest.get_mod_storage()
 local houses = minetest.deserialize(storage:get_string("houses")) or {}
 local forms_open = {}
+local pilot_sessions = {}
 
 minetest.register_privilege("house_admin", {
 	description = S("Pode administrar qualquer casa colocada por escritura"),
@@ -318,13 +319,15 @@ local function house_form(player, pos, house)
 		"label[0.5,1.6;Construída em: " .. built .. "]" ..
 		"label[0.5,2.1;Moradores autorizados: " .. minetest.formspec_escape(guests ~= "" and guests or "ninguém além do dono") .. "]"
 	if owner then
+		local pilotando = pilot_sessions[player:get_player_name()] == house.id
 		formspec = formspec .. "field[0.5,3.2;9,0.8;guests;Usuários que podem entrar (separe por vírgulas);" .. minetest.formspec_escape(guests) .. "]" ..
 			"button[0.5,4;2.2,0.8;save_guests;Salvar acessos]" ..
 			"button[2.9,4;2.2,0.8;collect;Voltar a escritura]" ..
 			"button[5.3,4;1.8,0.8;rotate_left;Girar ←]button[7.2,4;1.8,0.8;rotate_right;Girar →]" ..
 			"label[0.5,5.15;Mover a casa inteira:]" ..
 			"button[0.5,5.6;1.3,0.8;move_n;Norte]button[1.9,5.6;1.3,0.8;move_s;Sul]button[3.3,5.6;1.3,0.8;move_w;Oeste]button[4.7,5.6;1.3,0.8;move_e;Leste]" ..
-			"button[6.2,5.6;1.3,0.8;move_up;Subir]button[7.6,5.6;1.3,0.8;move_down;Descer]"
+			"button[6.2,5.6;1.3,0.8;move_up;Subir]button[7.6,5.6;1.3,0.8;move_down;Descer]" ..
+			"button[2.6,6.75;4.8,0.8;pilot;" .. (pilotando and "Parar piloto" or "Pilotar casa (câmera livre)") .. "]"
 	end
 	forms_open[player:get_player_name()] = pos
 	minetest.show_formspec(player:get_player_name(), "garrafa_tesouro:house", formspec)
@@ -512,6 +515,56 @@ local function rebuild_house(house, new_start, new_rotation, player)
 	return true
 end
 
+local function stop_house_pilot(player, message)
+	local nome, session = player:get_player_name(), pilot_sessions[player:get_player_name()]
+	if not session then return end
+	player:set_physics_override({speed = session.speed or 1})
+	pilot_sessions[nome] = nil
+	if message then minetest.chat_send_player(nome, S("Piloto da casa encerrado.")) end
+end
+
+local function cardinal_from_camera(player, sideways)
+	local direction = player:get_look_dir()
+	local x, z = direction.x, direction.z
+	if sideways then x, z = -z, x end
+	if math.abs(x) >= math.abs(z) then return {x = x >= 0 and 1 or -1, y = 0, z = 0} end
+	return {x = 0, y = 0, z = z >= 0 and 1 or -1}
+end
+
+local pilot_elapsed = 0
+minetest.register_globalstep(function(dtime)
+	pilot_elapsed = pilot_elapsed + dtime
+	if pilot_elapsed < 0.45 then return end
+	pilot_elapsed = 0
+	for nome, session in pairs(pilot_sessions) do
+		local player, house = minetest.get_player_by_name(nome), houses[session.house_id]
+		if not (player and house and can_manage_house(player, house)) then
+			if player then stop_house_pilot(player) end
+		else
+			local control = player:get_player_control()
+			if control.aux1 and control.jump and control.sneak then
+				stop_house_pilot(player, true)
+			elseif control.aux1 then
+				if control.jump and (control.left or control.right) then
+					local current = rotations[house.rotation or "0"] or 1
+					local delta = control.left and -1 or 1
+					rebuild_house(house, house.start, rotation_values[((current - 1 + delta) % #rotation_values) + 1], player)
+				elseif control.sneak and (control.up or control.down) then
+					rebuild_house(house, vector.add(house.start, {x = 0, y = control.up and 1 or -1, z = 0}), house.rotation, player)
+				elseif control.up or control.down or control.left or control.right then
+					local offset = cardinal_from_camera(player, control.left or control.right)
+					if control.down or control.right then offset = vector.multiply(offset, -1) end
+					rebuild_house(house, vector.add(house.start, offset), house.rotation, player)
+				end
+			end
+		end
+	end
+end)
+
+minetest.register_on_leaveplayer(function(player)
+	pilot_sessions[player:get_player_name()] = nil
+end)
+
 minetest.register_on_player_receive_fields(function(player, formname, fields)
 	if formname ~= "garrafa_tesouro:house" then return end
 	local pos = forms_open[player:get_player_name()]
@@ -520,7 +573,16 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 	if fields.quit then return true end
 	local house = houses[minetest.get_meta(pos):get_string("house_id")]
 	if not can_manage_house(player, house) then return true end
-	if fields.save_guests then
+	if fields.pilot then
+		if pilot_sessions[player:get_player_name()] then
+			stop_house_pilot(player, true)
+		else
+			pilot_sessions[player:get_player_name()] = {house_id = house.id, speed = player:get_physics_override().speed}
+			player:set_physics_override({speed = 0})
+			minetest.chat_send_player(player:get_player_name(), S("Piloto ativo: Aux1+WASD move, Aux1+Espaço+A/D gira, Aux1+Shift+W/S sobe ou desce. Aux1+Espaço+Shift encerra."))
+		end
+		return true
+	elseif fields.save_guests then
 		house.guests = users_from_text(fields.guests)
 		update_area_access(house)
 		save_houses()
