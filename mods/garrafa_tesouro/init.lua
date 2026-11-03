@@ -375,6 +375,12 @@ local function marker_rightclick(pos, node, clicker)
 	recolher_deed(pos, clicker)
 end
 
+local function is_deed_marker(pos)
+	local meta = minetest.get_meta(pos)
+	return meta:get_string("house_id") ~= ""
+		or (meta:get_string("deed") ~= "" and meta:get_string("inicio") ~= "")
+end
+
 minetest.register_node("garrafa_tesouro:house_beacon", {
 	description = S("Marcador amarelo da casa"),
 	drawtype = "plantlike",
@@ -413,11 +419,11 @@ if MARKER_NODE == "building_sign:building_marker" then
 		end
 		if original then return original(pos, node, clicker, itemstack, pointed_thing) end
 	end, can_dig = function(pos, player)
-		if minetest.get_meta(pos):get_string("house_id") ~= "" then return false end
+		if is_deed_marker(pos) then return false end
 		if original_can_dig then return original_can_dig(pos, player) end
 		return true
 	end, on_blast = function(pos)
-		if minetest.get_meta(pos):get_string("house_id") ~= "" then return {} end
+		if is_deed_marker(pos) then return {} end
 		if original_on_blast then return original_on_blast(pos) end
 	end})
 end

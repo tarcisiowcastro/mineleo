@@ -5,6 +5,14 @@ local function execute(command, name, params)
 	if message then minetest.chat_send_player(name, message) end
 end
 
+-- Some installations load WorldEdit's GUI as a nested modpack member. Delay
+-- registration until all mods have initialized so the GUI extension API exists.
+minetest.register_on_mods_loaded(function()
+	if not worldedit.register_gui_function or not worldedit.register_gui_handler then
+		minetest.log("error", "[worldedit_purge] worldedit_gui is not available")
+		return
+	end
+
 worldedit.register_gui_function("worldedit_purge_region", {
 	name = "Apagar Tudo (P1/P2)",
 	privs = {worldedit = true},
@@ -37,4 +45,5 @@ worldedit.register_gui_handler("worldedit_purge_region", function(name, fields)
 	end
 	minetest.chat_send_player(name, "Seleção apagada; " .. removed .. " entidade(s) removida(s).")
 	return true
+end)
 end)
