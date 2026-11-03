@@ -29,6 +29,8 @@ mods/*
 !mods/pescaria/**
 !mods/garrafa_tesouro
 !mods/garrafa_tesouro/**
+!mods/worldedit_purge
+!mods/worldedit_purge/**
 *.log
 .idea/
 .vscode/
