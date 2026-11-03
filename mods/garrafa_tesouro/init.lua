@@ -652,7 +652,7 @@ local function mostrar_catalogo(nome, pagina)
 		if def then
 			local x,y = (i%3)*4, 0.9+math.floor(i/3)*1.7
 			formspec[#formspec+1] = miniatura_real(def, x+.1, y-.1)
-			formspec[#formspec+1] = string.format("button[%0.1f,%0.1f;2.45,0.7;pegar_%s;Pegar deed]",x+1.45,y,def.id)
+			formspec[#formspec+1] = string.format("button[%0.1f,%0.1f;2.45,0.7;ver_%s;Ver em detalhes]",x+1.45,y,def.id)
 			formspec[#formspec+1] = string.format("label[%0.1f,%0.1f;%s]",x+1.45,y+.75,minetest.formspec_escape(def.nome))
 		end
 	end
@@ -663,13 +663,18 @@ end
 -- Renderiza a fachada real do arquivo .mts selecionado usando as texturas dos
 -- próprios nós. Isto não é um ícone genérico: cada deed lê sua construção.
 local previews_deed = {}
-local function mostrar_previa(nome, def)
+local function mostrar_previa(nome, def, lado)
 	if def.castelo then
+		local imagem = def.estilo == "bodiam" and "garrafa_tesouro_preview_casa.png"
+			or def.estilo == "conwy" and "garrafa_tesouro_preview_alcazar.png"
+			or "garrafa_tesouro_preview_fortaleza.png"
+		local size = def.tamanho
 		return minetest.show_formspec(nome, "garrafa_tesouro:preview_"..def.id,
-			"formspec_version[4]size[12,9]label[0.4,0.4;"..minetest.formspec_escape(def.nome).."]"..
-			"image[2.0,1.0;8,6;garrafa_tesouro_preview_casa.png]"..
-			"label[0.7,7.3;Castelo estrutural: muralhas, quatro torres, portão, pátio e torre central.]"..
-			"button[3.4,8;2.4,0.7;pegar_"..def.id..";Pegar deed]button[6.1,8;2.4,0.7;voltar;Voltar]")
+			"formspec_version[4]size[12,10]label[0.4,0.4;"..minetest.formspec_escape(def.nome).." — prévia detalhada]"..
+			"image[2.0,1.0;8,6;"..imagem.."]"..
+			"label[0.7,7.3;Castelo: muralhas, torres, portão, pátio e torre central.]"..
+			"label[0.7,7.8;Tamanho: "..size.x.." × "..size.y.." × "..size.z.." blocos]"..
+			"button[3.4,8.8;2.4,0.7;pegar_"..def.id..";Pegar deed]button[6.1,8.8;2.4,0.7;voltar;Voltar]")
 	end
 	if not (handle_schematics and handle_schematics.analyze_mts_file and build_chest and build_chest.preview_image_create_views) then
 		return minetest.chat_send_player(nome, S("O renderizador de prévias não foi carregado; tente novamente após reiniciar o servidor."))
@@ -685,9 +690,11 @@ local function mostrar_previa(nome, def)
 		build_chest.building[chave] = dados
 		previews_deed[chave] = true
 	end
-	local imagem = build_chest.preview_image_formspec(chave, {}, "front")
+	local imagem = build_chest.preview_image_formspec(chave, {}, lado or "front")
 	minetest.show_formspec(nome, "garrafa_tesouro:preview_"..def.id,
 		"formspec_version[4]size[12,11]label[0.4,0.3;"..minetest.formspec_escape(def.nome).." — prévia da estrutura real]"..
+		"label[0.4,0.75;Use os botões Frente, Direita, Trás, Esquerda, Topo e Piso para inspecionar todos os lados.]"..
+		"label[0.4,9.45;Tamanho: "..dados.size.x.." × "..dados.size.y.." × "..dados.size.z.." blocos]"..
 		imagem.."button[3.3,10.1;2.4,0.7;pegar_"..def.id..";Pegar deed]button[6.2,10.1;2.4,0.7;voltar;Voltar]")
 end
 
@@ -698,6 +705,11 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 	if fields.voltar then return mostrar_catalogo(nome, pagina_catalogo[nome] or 1) end
 	if fields.anterior then return mostrar_catalogo(nome, (pagina_catalogo[nome] or 1)-1) end
 	if fields.proxima then return mostrar_catalogo(nome, (pagina_catalogo[nome] or 1)+1) end
+	for id, def in pairs(por_id) do
+		if fields["ver_"..id] then return mostrar_previa(nome, def) end
+		local preview_id = formname:match("^garrafa_tesouro:preview_(.+)$")
+		if preview_id == id and fields.preview then return mostrar_previa(nome, def, fields.preview) end
+	end
 	for id in pairs(por_id) do if fields["pegar_"..id] then
 		local sobra = player:get_inventory():add_item("main", "garrafa_tesouro:deed_"..id)
 		if not sobra:is_empty() then minetest.add_item(player:get_pos(), sobra) end
