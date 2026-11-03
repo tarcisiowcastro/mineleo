@@ -238,6 +238,8 @@ minetest.register_node("garrafa_tesouro:marco_deed", {
 	tiles = {"default_wood.png^[colorize:#5B2C6F:90"},
 	groups = {cracky = 1, not_in_creative_inventory = 1},
 	drop = "",
+	can_dig = function() return false end,
+	on_blast = function() return {} end,
 })
 
 local MARKER_NODE = minetest.registered_nodes["building_sign:building_marker"]
@@ -386,6 +388,8 @@ minetest.register_node("garrafa_tesouro:house_beacon", {
 	buildable_to = true,
 	groups = {not_in_creative_inventory = 1},
 	drop = "",
+	can_dig = function() return false end,
+	on_blast = function() return {} end,
 	on_rightclick = function(pos, node, clicker)
 		local house = houses[minetest.get_meta(pos):get_string("house_id")]
 		if house then house_form(clicker, pos, house) end
@@ -401,11 +405,20 @@ end
 minetest.override_item("garrafa_tesouro:marco_deed", {on_rightclick = marker_rightclick})
 if MARKER_NODE == "building_sign:building_marker" then
 	local original = minetest.registered_nodes[MARKER_NODE].on_rightclick
+	local original_can_dig = minetest.registered_nodes[MARKER_NODE].can_dig
+	local original_on_blast = minetest.registered_nodes[MARKER_NODE].on_blast
 	minetest.override_item(MARKER_NODE, {on_rightclick = function(pos, node, clicker, itemstack, pointed_thing)
 		if minetest.get_meta(pos):get_string("house_id") ~= "" then
 			return marker_rightclick(pos, node, clicker)
 		end
 		if original then return original(pos, node, clicker, itemstack, pointed_thing) end
+	end, can_dig = function(pos, player)
+		if minetest.get_meta(pos):get_string("house_id") ~= "" then return false end
+		if original_can_dig then return original_can_dig(pos, player) end
+		return true
+	end, on_blast = function(pos)
+		if minetest.get_meta(pos):get_string("house_id") ~= "" then return {} end
+		if original_on_blast then return original_on_blast(pos) end
 	end})
 end
 
