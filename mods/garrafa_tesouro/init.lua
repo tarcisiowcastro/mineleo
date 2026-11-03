@@ -498,6 +498,7 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 	local pos = forms_open[player:get_player_name()]
 	forms_open[player:get_player_name()] = nil
 	if not pos then return true end
+	if fields.quit then return true end
 	local house = houses[minetest.get_meta(pos):get_string("house_id")]
 	if not can_manage_house(player, house) then return true end
 	if fields.save_guests then
@@ -507,6 +508,7 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 		minetest.chat_send_player(player:get_player_name(), S("Acessos da casa atualizados."))
 	elseif fields.collect then
 		recolher_deed(pos, player)
+		return true
 	elseif fields.rotate_left or fields.rotate_right then
 		local current = rotations[house.rotation or "0"] or 1
 		local delta = fields.rotate_left and -1 or 1
@@ -521,6 +523,9 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 			if fields[field] then rebuild_house(house, vector.add(house.start, offset), house.rotation, player); break end
 		end
 	end
+	-- Re-open the same panel after every non-destructive action. The marker may
+	-- have moved with the house, so use its new position rather than the old one.
+	house_form(player, marker_position(house.start, house.size, house.rotation), house)
 	return true
 end)
 
