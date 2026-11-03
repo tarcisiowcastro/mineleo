@@ -753,21 +753,6 @@ local function abrir_mostra_3d(player, def)
 	minetest.chat_send_player(nome, S("Mostra 3D aberta. Circule livremente e clique no bloco verde brilhante para voltar."))
 end
 
--- Prepara uma construção por vez para não congelar o servidor ao montar toda a
--- exposição. Depois de pronta, cada casa permanece lado a lado no mesmo plano.
-minetest.register_on_mods_loaded(function()
-	local indice = 1
-	local function proxima_casa()
-		local def = showroom_defs[indice]
-		if not def then return end
-		local ok, erro = pcall(construir_mostra, def)
-		if not ok then minetest.log("error", "[garrafa_tesouro] Falha ao montar mostra 3D de " .. def.id .. ": " .. tostring(erro)) end
-		indice = indice + 1
-		minetest.after(0.3, proxima_casa)
-	end
-	minetest.after(2, proxima_casa)
-end)
-
 minetest.register_on_joinplayer(function(player)
 	minetest.after(0.5, function()
 		if player:is_player() and showroom_returns[player:get_player_name()] then
@@ -788,7 +773,7 @@ local function mostrar_previa(nome, def, lado)
 			"image[2.0,1.0;8,6;"..imagem.."]"..
 			"label[0.7,7.3;Castelo: muralhas, torres, portão, pátio e torre central.]"..
 			"label[0.7,7.8;Tamanho: "..size.x.." × "..size.y.." × "..size.z.." blocos]"..
-			"button[1.7,8.8;2.4,0.7;visitar3d_"..def.id..";Visitar em 3D]button[4.8,8.8;2.4,0.7;pegar_"..def.id..";Pegar deed]button[7.9,8.8;2.4,0.7;voltar;Voltar]")
+			"button[3.4,8.8;2.4,0.7;pegar_"..def.id..";Pegar deed]button[6.1,8.8;2.4,0.7;voltar;Voltar]")
 	end
 	if not (handle_schematics and handle_schematics.analyze_mts_file and build_chest and build_chest.preview_image_create_views) then
 		return minetest.chat_send_player(nome, S("O renderizador de prévias não foi carregado; tente novamente após reiniciar o servidor."))
@@ -827,7 +812,7 @@ local function mostrar_previa(nome, def, lado)
 		"formspec_version[4]size[12,11]label[0.4,0.3;"..minetest.formspec_escape(def.nome).." — prévia da estrutura real]"..
 		"label[0.4,0.75;Use os botões Frente, Direita, Trás, Esquerda, Topo e Piso para inspecionar todos os lados.]"..
 		"label[0.4,9.45;Tamanho: "..dados.size.x.." × "..dados.size.y.." × "..dados.size.z.." blocos]"..
-		imagem.."button[1.7,10.1;2.4,0.7;visitar3d_"..def.id..";Visitar em 3D]button[4.8,10.1;2.4,0.7;pegar_"..def.id..";Pegar deed]button[7.9,10.1;2.4,0.7;voltar;Voltar]")
+		imagem.."button[3.3,10.1;2.4,0.7;pegar_"..def.id..";Pegar deed]button[6.2,10.1;2.4,0.7;voltar;Voltar]")
 end
 
 minetest.register_on_player_receive_fields(function(player, formname, fields)
@@ -839,7 +824,6 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 	if fields.proxima then return mostrar_catalogo(nome, (pagina_catalogo[nome] or 1)+1) end
 	for id, def in pairs(por_id) do
 		if fields["ver_"..id] then return mostrar_previa(nome, def) end
-		if fields["visitar3d_"..id] then return abrir_mostra_3d(player, def) end
 		local preview_id = formname:match("^garrafa_tesouro:preview_(.+)$")
 		if preview_id == id and fields.preview then return mostrar_previa(nome, def, fields.preview) end
 	end
