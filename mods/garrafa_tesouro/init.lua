@@ -663,46 +663,6 @@ end
 -- Renderiza a fachada real do arquivo .mts selecionado usando as texturas dos
 -- próprios nós. Isto não é um ícone genérico: cada deed lê sua construção.
 local previews_deed = {}
-local preview_slots = minetest.deserialize(storage:get_string("preview_slots")) or {}
-local preview_returns = {}
-local function preview_origin(nome)
-	local slot = preview_slots[nome]
-	if not slot then
-		slot = 1
-		for _ in pairs(preview_slots) do slot = slot + 1 end
-		preview_slots[nome] = slot
-		storage:set_string("preview_slots", minetest.serialize(preview_slots))
-	end
-	return {x = 500000 + ((slot - 1) % 32) * 256, y = 30000, z = 500000 + math.floor((slot - 1) / 32) * 256}
-end
-
-local function abrir_previa_3d(player, def)
-	local nome = player:get_player_name()
-	local inicio = preview_origin(nome)
-	local tamanho = def.tamanho or tamanho_esquema(def)
-	if not tamanho then
-		return minetest.chat_send_player(nome, S("Não foi possível preparar a prévia 3D desta estrutura."))
-	end
-	preview_returns[nome] = {pos = vector.new(player:get_pos()), yaw = player:get_look_horizontal(), pitch = player:get_look_vertical()}
-	-- A plataforma dá espaço para caminhar em volta da casa; cada jogador recebe
-	-- um lote distante e exclusivo, portanto a prévia não afeta o mundo jogável.
-	for x = -6, tamanho.x + 5 do
-		for z = -6, tamanho.z + 5 do
-			minetest.set_node({x = inicio.x + x, y = inicio.y - 1, z = inicio.z + z}, {name = "default:stone"})
-		end
-	end
-	if def.castelo then
-		construir_castelo(inicio, tamanho, def.estilo, "0")
-	else
-		minetest.place_schematic(inicio, schem_path .. def.arquivo, "0", substituicoes_para(def), true)
-	end
-	local distancia = math.max(tamanho.x, tamanho.z) + 5
-	player:set_pos({x = inicio.x + math.floor(tamanho.x / 2), y = inicio.y + math.max(3, math.floor(tamanho.y / 2)), z = inicio.z + distancia})
-	player:set_look_horizontal(math.pi)
-	player:set_look_vertical(-0.15)
-	minetest.chat_send_player(nome, S("Prévia 3D aberta. Gire a câmera livremente com o mouse e use /sairpreview para voltar exatamente ao ponto anterior."))
-end
-
 local function mostrar_previa(nome, def, lado)
 	if def.castelo then
 		local imagem = def.estilo == "bodiam" and "garrafa_tesouro_preview_casa.png"
@@ -714,7 +674,7 @@ local function mostrar_previa(nome, def, lado)
 			"image[2.0,1.0;8,6;"..imagem.."]"..
 			"label[0.7,7.3;Castelo: muralhas, torres, portão, pátio e torre central.]"..
 			"label[0.7,7.8;Tamanho: "..size.x.." × "..size.y.." × "..size.z.." blocos]"..
-			"button[1.8,8.8;2.4,0.7;abrir3d_"..def.id..";Abrir em 3D]button[4.8,8.8;2.4,0.7;pegar_"..def.id..";Pegar deed]button[7.8,8.8;2.4,0.7;voltar;Voltar]")
+			"button[3.4,8.8;2.4,0.7;pegar_"..def.id..";Pegar deed]button[6.1,8.8;2.4,0.7;voltar;Voltar]")
 	end
 	if not (handle_schematics and handle_schematics.analyze_mts_file and build_chest and build_chest.preview_image_create_views) then
 		return minetest.chat_send_player(nome, S("O renderizador de prévias não foi carregado; tente novamente após reiniciar o servidor."))
@@ -753,7 +713,7 @@ local function mostrar_previa(nome, def, lado)
 		"formspec_version[4]size[12,11]label[0.4,0.3;"..minetest.formspec_escape(def.nome).." — prévia da estrutura real]"..
 		"label[0.4,0.75;Use os botões Frente, Direita, Trás, Esquerda, Topo e Piso para inspecionar todos os lados.]"..
 		"label[0.4,9.45;Tamanho: "..dados.size.x.." × "..dados.size.y.." × "..dados.size.z.." blocos]"..
-		imagem.."button[1.7,10.1;2.4,0.7;abrir3d_"..def.id..";Abrir em 3D]button[4.8,10.1;2.4,0.7;pegar_"..def.id..";Pegar deed]button[7.9,10.1;2.4,0.7;voltar;Voltar]")
+		imagem.."button[3.3,10.1;2.4,0.7;pegar_"..def.id..";Pegar deed]button[6.2,10.1;2.4,0.7;voltar;Voltar]")
 end
 
 minetest.register_on_player_receive_fields(function(player, formname, fields)
@@ -765,7 +725,6 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 	if fields.proxima then return mostrar_catalogo(nome, (pagina_catalogo[nome] or 1)+1) end
 	for id, def in pairs(por_id) do
 		if fields["ver_"..id] then return mostrar_previa(nome, def) end
-		if fields["abrir3d_"..id] then return abrir_previa_3d(player, def) end
 		local preview_id = formname:match("^garrafa_tesouro:preview_(.+)$")
 		if preview_id == id and fields.preview then return mostrar_previa(nome, def, fields.preview) end
 	end
@@ -775,24 +734,6 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 		minetest.chat_send_player(nome, S("Deed recebido: @1", por_id[id].nome)); return true
 	end end
 	return true
-end)
-
-minetest.register_chatcommand("sairpreview", {
-	description = S("Volta da prévia 3D de casas"),
-	func = function(nome)
-		local retorno = preview_returns[nome]
-		local player = minetest.get_player_by_name(nome)
-		if not (player and retorno) then return false, S("Você não está em uma prévia 3D nesta sessão.") end
-		player:set_pos(retorno.pos)
-		player:set_look_horizontal(retorno.yaw)
-		player:set_look_vertical(retorno.pitch)
-		preview_returns[nome] = nil
-		return true, S("Você voltou ao ponto de onde abriu a prévia.")
-	end,
-})
-
-minetest.register_on_leaveplayer(function(player)
-	preview_returns[player:get_player_name()] = nil
 end)
 
 minetest.register_chatcommand("casas", {description=S("Abre o catálogo de casas e castelos para teste (admin)"), privs={give=true}, func=function(nome) mostrar_catalogo(nome,1); return true end})
