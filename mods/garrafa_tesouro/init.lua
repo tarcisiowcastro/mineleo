@@ -680,17 +680,35 @@ local function mostrar_previa(nome, def, lado)
 		return minetest.chat_send_player(nome, S("O renderizador de prévias não foi carregado; tente novamente após reiniciar o servidor."))
 	end
 	local chave = "garrafa_tesouro_" .. def.id
+	build_chest.building = build_chest.building or {}
+	local dados = build_chest.building[chave]
 	if not previews_deed[chave] then
 		local caminho = schem_path .. def.arquivo:gsub("%.mts$", "")
-		local dados = handle_schematics.analyze_mts_file(caminho)
+		local ok, carregado = pcall(handle_schematics.analyze_mts_file, caminho)
+		if not ok then
+			minetest.log("error", "[garrafa_tesouro] Falha ao ler prévia de " .. def.id .. ": " .. tostring(carregado))
+			return minetest.chat_send_player(nome, S("Não foi possível montar a prévia desta estrutura."))
+		end
+		dados = carregado
 		if not dados then return minetest.chat_send_player(nome, S("Não foi possível ler a estrutura deste deed.")) end
 		dados.yoff = 0
-		dados.preview = build_chest.preview_image_create_views(dados)
-		build_chest.building = build_chest.building or {}
+		local preview_ok, preview = pcall(build_chest.preview_image_create_views, dados)
+		if not preview_ok then
+			minetest.log("error", "[garrafa_tesouro] Falha ao renderizar prévia de " .. def.id .. ": " .. tostring(preview))
+			return minetest.chat_send_player(nome, S("Não foi possível renderizar a prévia desta estrutura."))
+		end
+		dados.preview = preview
 		build_chest.building[chave] = dados
 		previews_deed[chave] = true
 	end
-	local imagem = build_chest.preview_image_formspec(chave, {}, lado or "front")
+	if not dados or not dados.size then
+		return minetest.chat_send_player(nome, S("Os dados da prévia desta estrutura estão incompletos."))
+	end
+	local preview_ok, imagem = pcall(build_chest.preview_image_formspec, chave, {}, lado or "front")
+	if not preview_ok then
+		minetest.log("error", "[garrafa_tesouro] Falha ao exibir prévia de " .. def.id .. ": " .. tostring(imagem))
+		return minetest.chat_send_player(nome, S("Não foi possível exibir a prévia desta estrutura."))
+	end
 	minetest.show_formspec(nome, "garrafa_tesouro:preview_"..def.id,
 		"formspec_version[4]size[12,11]label[0.4,0.3;"..minetest.formspec_escape(def.nome).." — prévia da estrutura real]"..
 		"label[0.4,0.75;Use os botões Frente, Direita, Trás, Esquerda, Topo e Piso para inspecionar todos os lados.]"..
