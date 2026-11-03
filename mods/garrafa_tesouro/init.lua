@@ -567,6 +567,31 @@ minetest.register_lbm({
 	end,
 })
 
+-- A marker may have been removed before its protection was introduced. House
+-- records are persistent, so restore both controls from that record at server
+-- start instead of leaving the house impossible to collect or administer.
+minetest.register_on_mods_loaded(function()
+	minetest.after(0, function()
+		for _, house in pairs(houses) do
+			if house.start and house.size then
+				local house_to_restore = house
+				house.rotation = house.rotation or "0"
+				if not house.finish then
+					local _, finish = house_bounds(house.start, house.size, house.rotation)
+					house.finish = finish
+				end
+				local marker = marker_position(house_to_restore.start, house_to_restore.size, house_to_restore.rotation)
+				local beacon = beacon_position(house_to_restore)
+				minetest.emerge_area(marker, beacon, function(_, action, remaining)
+					if remaining ~= 0 or action == "cancelled" then return end
+					place_marker(house_to_restore)
+				end)
+			end
+		end
+		save_houses()
+	end)
+end)
+
 for _, def in ipairs(catalogo) do
 	minetest.register_craftitem("garrafa_tesouro:deed_" .. def.id, {
 		description = S("Deed: @1\nEstrutura completa; a placa na entrada recolhe para este mesmo papel.", def.nome),
