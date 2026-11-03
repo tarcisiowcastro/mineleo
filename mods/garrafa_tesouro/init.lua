@@ -663,8 +663,16 @@ end
 -- Renderiza a fachada real do arquivo .mts selecionado usando as texturas dos
 -- próprios nós. Isto não é um ícone genérico: cada deed lê sua construção.
 local previews_deed = {}
-local SHOWROOM_BASE, SHOWROOM_STEP, SHOWROOM_COLUMNS = {x = 500000, y = 30000, z = 500000}, 128, 6
+-- Luanti limita coordenadas de mapa a aproximadamente ±31 mil. A exposição
+-- fica alta e afastada, mas estritamente dentro desse limite.
+local SHOWROOM_BASE, SHOWROOM_STEP, SHOWROOM_COLUMNS = {x = 20000, y = 20000, z = 20000}, 128, 6
+local SHOWROOM_LAYOUT_VERSION = 2
 local showroom_built = minetest.deserialize(storage:get_string("showroom_built")) or {}
+if storage:get_int("showroom_layout_version") ~= SHOWROOM_LAYOUT_VERSION then
+	showroom_built = {}
+	storage:set_string("showroom_built", minetest.serialize(showroom_built))
+	storage:set_int("showroom_layout_version", SHOWROOM_LAYOUT_VERSION)
+end
 local showroom_returns = minetest.deserialize(storage:get_string("showroom_returns")) or {}
 local showroom_defs = {}
 for _, def in ipairs(catalogo) do table.insert(showroom_defs, def) end
