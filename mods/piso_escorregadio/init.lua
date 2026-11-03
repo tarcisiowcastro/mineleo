@@ -71,20 +71,39 @@ local road_slopes = {
 
 local function slope_velocity(node)
 	local down = core.facedir_to_dir(node.param2 or 0)
-	local component = ROAD_SLOPE_SPEED / math.sqrt(2)
-	return {x = down.x * component, y = -component, z = down.z * component}
+	local horizontal, vertical
+	if node.name:find("_long", 1, true) then
+		horizontal, vertical = ROAD_SLOPE_SPEED * 4 / math.sqrt(17), ROAD_SLOPE_SPEED / math.sqrt(17)
+	else
+		horizontal, vertical = ROAD_SLOPE_SPEED / math.sqrt(2), ROAD_SLOPE_SPEED / math.sqrt(2)
+	end
+	return {x = down.x * horizontal, y = -vertical, z = down.z * horizontal}
+end
+
+local function road_slope_under(pos)
+	-- A colisão de uma malha inclinada pode deixar os pés entre dois níveis do
+	-- nó. Verificar três alturas cobre a rampa curta e a rampa longa.
+	for dy = 0, -2, -1 do
+		local node = core.get_node(vector.add(pos, {x = 0, y = dy, z = 0}))
+		if road_slopes[node.name] then return node end
+	end
 end
 
 local slope_timer = 0
 core.register_globalstep(function(dtime)
 	slope_timer = slope_timer + dtime
-	if slope_timer < 0.1 then return end
+	if slope_timer < 0.05 then return end
+	local step = slope_timer
 	slope_timer = 0
 	for _, player in ipairs(core.get_connected_players()) do
 		local pos = vector.subtract(player:get_pos(), {x = 0, y = 0.1, z = 0})
-		local node = core.get_node(pos)
-		if road_slopes[node.name] then
-			player:set_velocity(slope_velocity(node))
+		local node = road_slope_under(pos)
+		if node then
+			local velocity = slope_velocity(node)
+			-- Move pela superfície em vez de depender das colisões dos degraus do
+			-- mesh: assim a descida fica contínua e mantém velocidade 100.
+			player:set_pos(vector.add(player:get_pos(), vector.multiply(velocity, step)))
+			player:set_velocity(velocity)
 		end
 	end
 end)
