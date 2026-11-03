@@ -542,9 +542,9 @@ minetest.register_globalstep(function(dtime)
 			if player then stop_house_pilot(player) end
 		else
 			local control = player:get_player_control()
-			if control.aux1 and control.jump and control.sneak then
+			if control.jump and control.sneak then
 				stop_house_pilot(player, true)
-			elseif control.aux1 then
+			else
 				if control.jump and (control.left or control.right) then
 					local current = rotations[house.rotation or "0"] or 1
 					local delta = control.left and -1 or 1
@@ -579,7 +579,7 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 		else
 			pilot_sessions[player:get_player_name()] = {house_id = house.id, speed = player:get_physics_override().speed}
 			player:set_physics_override({speed = 0})
-			minetest.chat_send_player(player:get_player_name(), S("Piloto ativo: Aux1+WASD move, Aux1+Espaço+A/D gira, Aux1+Shift+W/S sobe ou desce. Aux1+Espaço+Shift encerra."))
+			minetest.chat_send_player(player:get_player_name(), S("Piloto ativo: WASD move, Espaço+A/D gira, Shift+W/S sobe ou desce. Espaço+Shift encerra."))
 		end
 		return true
 	elseif fields.save_guests then
