@@ -57,3 +57,34 @@ end)
 core.register_on_leaveplayer(function(player)
 	boosted[player:get_player_name()] = nil
 end)
+
+-- Rampas de estrada do cottages: em vez de apenas reduzir atrito, elas
+-- transferem velocidade real para baixo na inclinação. A direção facedir da
+-- peça é a direção de descida e o vetor é normalizado para velocidade 100.
+local ROAD_SLOPE_SPEED = 100
+local road_slopes = {
+	["cottages:feldweg_slope"] = true,
+	["cottages:feldweg_slope_bamboo"] = true,
+	["cottages:feldweg_slope_long"] = true,
+	["cottages:feldweg_slope_long_bamboo"] = true,
+}
+
+local function slope_velocity(node)
+	local down = core.facedir_to_dir(node.param2 or 0)
+	local component = ROAD_SLOPE_SPEED / math.sqrt(2)
+	return {x = down.x * component, y = -component, z = down.z * component}
+end
+
+local slope_timer = 0
+core.register_globalstep(function(dtime)
+	slope_timer = slope_timer + dtime
+	if slope_timer < 0.1 then return end
+	slope_timer = 0
+	for _, player in ipairs(core.get_connected_players()) do
+		local pos = vector.subtract(player:get_pos(), {x = 0, y = 0.1, z = 0})
+		local node = core.get_node(pos)
+		if road_slopes[node.name] then
+			player:set_velocity(slope_velocity(node))
+		end
+	end
+end)
