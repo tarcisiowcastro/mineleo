@@ -1,0 +1,95 @@
+name: Deploy na VPS
+
+# A cada push no branch principal, entra na VPS por SSH, faz backup do mundo,
+# atualiza o codigo (so fast-forward: nunca descarta commits feitos direto na
+# VPS), instala/atualiza os mods de terceiros e recria o container.
+#
+# Requer os secrets VPS_HOST, VPS_USER e VPS_SSH_KEY (chave privada cuja
+# publica esta em ~/.ssh/authorized_keys na VPS).
+
+on:
+  push:
+    branches:
+      - claude/mine-server-g8rzdh
+    paths-ignore:
+      - "README.md"
+      - "**/*.md"
+      - ".github/workflows/vps-diagnostico.yml"
+  workflow_dispatch:
+    inputs:
+      backup:
+        description: "Fazer backup do mundo antes do deploy"
+        type: boolean
+        default: true
+
+# Nunca dois deploys ao mesmo tempo; o mais novo espera o anterior terminar.
+concurrency:
+  group: deploy-vps
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      VPS_HOST: ${{ secrets.VPS_HOST }}
+      VPS_USER: ${{ secrets.VPS_USER }}
+      VPS_PORT: "22022"
+      BRANCH: ${{ github.ref_name }}
+      DO_BACKUP: ${{ github.event_name == 'push' || inputs.backup }}
+    steps:
+      - name: Configurar SSH
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          if [ -z "$VPS_HOST" ] || [ -z "$VPS_USER" ] || [ -z "$VPS_SSH_KEY" ]; then
+            echo "::error::Faltam os secrets VPS_HOST, VPS_USER e/ou VPS_SSH_KEY."
+            exit 1
+          fi
+          mkdir -p ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/id_vps
+          chmod 600 ~/.ssh/id_vps
+          ssh-keyscan -p "$VPS_PORT" "$VPS_HOST" >> ~/.ssh/known_hosts
+
+      - name: Deploy
+        run: |
+          ssh -i ~/.ssh/id_vps -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" \
+            "BRANCH='$BRANCH' DO_BACKUP='$DO_BACKUP' bash -s" <<'EOF'
+          set -euo pipefail
+          cd /root/mineleo
+
+          echo "== Commit atual: $(git log --oneline -1)"
+
+          if [ "$DO_BACKUP" = "true" ]; then
+            echo "== Backup do mundo"
+            ./scripts/backup-world.sh
+          fi
+
+          echo "== Atualizando codigo ($BRANCH)"
+          git fetch origin "$BRANCH"
+          if [ "$(git branch --show-current)" != "$BRANCH" ]; then
+            git checkout "$BRANCH"
+          fi
+          if ! git merge --ff-only "origin/$BRANCH"; then
+            echo "A VPS tem commits que nao estao no GitHub. Junte os historicos e rode de novo."
+            exit 1
+          fi
+          echo "== Novo commit: $(git log --oneline -1)"
+
+          echo "== Mods de terceiros"
+          ./scripts/install-mods.sh
+
+          echo "== Build e restart"
+          # --force-recreate: os mods sao volume, entao sem isso uma mudanca
+          # so de mod nao reiniciaria o servidor.
+          docker compose up -d --build --force-recreate
+
+          echo "== Aguardando o servidor"
+          sleep 20
+          docker compose ps
+          docker compose logs --tail=60 luanti 2>&1
+          if docker compose logs --tail=200 luanti 2>&1 | grep -qiE "ModError|Runtime error|Failed to load and run"; then
+            echo "Erro de mod detectado nos logs acima."
+            exit 1
+          fi
+          EOF
