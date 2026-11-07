@@ -368,11 +368,41 @@ minetest.register_chatcommand("painel", {
 	end,
 })
 
+-- Atalho: o servidor nao recebe teclas F1-F12 (sao so do cliente), entao o
+-- atalho e Shift + E (sneak + aux1) seguradas juntas por HOLD_TIME segundos.
+-- Nao dispara dentro de veiculos (attach), onde essas teclas tem outro uso.
+local HOLD_TIME = 0.5
+local hold = {}
+local fired = {}
+
+minetest.register_globalstep(function(dtime)
+	for _, player in ipairs(minetest.get_connected_players()) do
+		local name = player:get_player_name()
+		local ctrl = player:get_player_control()
+		if ctrl.sneak and ctrl.aux1 and not player:get_attach() then
+			hold[name] = (hold[name] or 0) + dtime
+			if hold[name] >= HOLD_TIME and not fired[name] then
+				fired[name] = true
+				show(name)
+			end
+		else
+			hold[name] = nil
+			fired[name] = nil
+		end
+	end
+end)
+
+minetest.register_on_leaveplayer(function(player)
+	local name = player:get_player_name()
+	hold[name] = nil
+	fired[name] = nil
+end)
+
 if minetest.global_exists("unified_inventory") and unified_inventory.register_button then
 	unified_inventory.register_button("painel_mineleo", {
 		type = "image",
 		image = "default_book_written.png",
-		tooltip = "Painel do servidor",
+		tooltip = "Painel do servidor (atalho: segure Shift + E)",
 		action = function(player)
 			show(player:get_player_name())
 		end,

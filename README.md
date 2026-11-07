@@ -83,7 +83,8 @@ O servidor vem com mods de animais e barco, buscados via `scripts/install-mods.s
   água do mar. Não mexe em rios nem em terreno aberto, e o alcance da água
   fica no padrão do jogo (rio = 2, mar = 8).
 - **`painel_mineleo`** (mod próprio) — botão com ícone de livro na barra fixa
-  do inventário (unified_inventory), ou `/painel`, abre uma janela com abas
+  do inventário (unified_inventory), o atalho **segurar Shift + E** (meio
+  segundo; não dispara dentro de veículos) ou `/painel` abre uma janela com abas
   que aciona todos os mods próprios sem digitar comando:
   - **Construção**: trilhos, cavar túnel, ladeira, replicar bloco da mão,
     desfazer (campos de quantidade, altura e largura).
