@@ -78,10 +78,45 @@ O servidor vem com mods de animais e barco, buscados via `scripts/install-mods.s
   carros dirigíveis (Beetle, Buggy, Coupe, DeLorean, Trans Am, moto, Vespa...).
   Fixado na release 0.68e via zip (não `git clone`), porque o HEAD atual do
   repo já exige Luanti 5.12+ e este servidor roda 5.6.1.
-- **`river_flow`** (mod próprio deste repo, não é de terceiros) — aumenta o
-  alcance da água e equaliza reservatórios conectados: ao abrir um túnel, a
-  água se redistribui até as superfícies ficarem no mesmo nível. O mar atua
-  como um reservatório na altura da sua superfície.
+- **`river_flow`** (mod próprio deste repo, não é de terceiros) — ao abrir um
+  túnel a partir do mar abaixo do nível do mar, enche a cavidade fechada com
+  água do mar. Não mexe em rios nem em terreno aberto, e o alcance da água
+  fica no padrão do jogo (rio = 2, mar = 8).
+- **`painel_mineleo`** (mod próprio) — botão com ícone de livro na barra fixa
+  do inventário (unified_inventory), ou `/painel`, abre uma janela com abas
+  que aciona todos os mods próprios sem digitar comando:
+  - **Construção**: trilhos, cavar túnel, ladeira, replicar bloco da mão,
+    desfazer (campos de quantidade, altura e largura).
+  - **Água**: alcance do escoamento (1 a 8 ou padrão, rio/mar, seleção do
+    WorldEdit ou raio), ver alcance local, contar/remover/parar a limpeza de
+    inundação (raio, altura mínima e máxima).
+  - **Mundo**: dia fixo liga/desliga/estado, turbo, povoar vilas, apagar tudo
+    na seleção do WorldEdit.
+  - **Casas e bichos**: catálogo de casas, recolher deed, invocar animais e
+    monstros, pescar.
+  - **Itens**: vara de pesca, manipulador, garrafa do tesouro, piso
+    escorregadio.
+  Cada botão chama o comando por baixo, então os privilégios continuam os
+  mesmos. Os comandos de chat continuam funcionando.
+- **`agua_regional`** (mod próprio) — alcance de escoamento da água por área.
+  Cria variantes visualmente idênticas da água do mar e do rio com alcance
+  1 a 8 e troca a água de uma área pela variante escolhida (priv `server`):
+  - `/agua_alcance 8` — alcance 8 na seleção do WorldEdit (`//pos1`/`//pos2`),
+    ou num raio de 16 em volta de você se não houver seleção.
+  - `/agua_alcance 8 30 rio` — só água de rio, raio 30.
+  - `/agua_alcance 5 sel mar` — só água do mar, na seleção do WorldEdit.
+  - `/agua_alcance padrao` — volta a área ao padrão (rio 2, mar 8).
+  - `/agua_info` — mostra o alcance da água onde você está.
+  - `/agua_limpar contar 2000` / `/agua_limpar remover 2000` — conta/remove
+    água do **mar** (`default:water_source`/`water_flowing`) acima do nível do
+    mar, num raio em volta de você (ou `sel` para a seleção do WorldEdit),
+    entre Y `water_level+1` e 256 (ajustável: `/agua_limpar remover 2000 2 120`).
+    Serve para desfazer as inundações do `river_flow` antigo: no mapa gerado
+    essa água não existe naturalmente (rios usam `river_water`). Também apaga
+    água de balde colocada acima do nível do mar. Roda em pedaços, sem travar
+    o servidor; `/agua_limpar parar` interrompe. Faça backup antes.
+  A água que escorre de uma fonte alterada herda o mesmo alcance. Não remova
+  o mod depois de usar: os blocos alterados virariam "unknown node".
 - **Escrituras de casas** (`garrafa_tesouro`) — cada casa recebe uma placa
   pequena acima da entrada. Ela mostra proprietário e data de construção;
   o dono também pode autorizar moradores, recolher a construção para a
@@ -240,7 +275,7 @@ start do container) — não precisa editar `world.mt` na mão.
 - `entrypoint.sh` — ativa os mods instalados no `world.mt` e sobe o `minetestserver`.
 - `scripts/install-mods.sh` — clona/atualiza os mods de terceiros em `mods/`.
 - `mods/mob_spawn_panel/`, `mods/tree_thinner/`, `mods/river_flow/`,
-  `mods/turbo_fly/` — mods próprios (versionados no git, ao contrário dos
+  `mods/agua_regional/`, `mods/painel_mineleo/`, `mods/turbo_fly/` — mods próprios (versionados no git, ao contrário dos
   demais em `mods/`, que são de terceiros e ignorados).
 - `minetest.example.conf` — modelo de configuração.
 - `kidlauncher/` — app Android que abre direto o cliente e trava o

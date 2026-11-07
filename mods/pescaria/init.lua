@@ -123,10 +123,8 @@ minetest.register_craftitem("pescaria:peixe_lendario", {
 })
 
 local function agua_valida(nodename)
-	return nodename == "default:water_source"
-		or nodename == "default:river_water_source"
-		or nodename == "default:water_flowing"
-		or nodename == "default:river_water_flowing"
+	-- grupo "water" cobre a agua padrao e as variantes do agua_regional
+	return minetest.get_item_group(nodename, "water") > 0
 end
 
 local ALCANCE_PESCA = 20

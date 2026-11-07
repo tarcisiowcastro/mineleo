@@ -7,6 +7,10 @@ mods/*
 !mods/tree_thinner/**
 !mods/river_flow
 !mods/river_flow/**
+!mods/agua_regional
+!mods/agua_regional/**
+!mods/painel_mineleo
+!mods/painel_mineleo/**
 !mods/turbo_fly
 !mods/turbo_fly/**
 !mods/math_isfinite_polyfill
