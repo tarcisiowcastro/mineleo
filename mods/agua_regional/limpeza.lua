@@ -1,14 +1,15 @@
--- Limpeza das inundacoes criadas pela versao antiga do river_flow.
+-- Remocao de agua numa area, em pedacos pequenos por passo do servidor para
+-- nao travar o jogo. Tipos:
 --
--- O solver antigo enchia cavidades com default:water_source ate a altura da
--- agua mais alta por perto (inclusive rios e cachoeiras). No mapa gerado, agua
--- do MAR nunca existe acima do nivel do mar (rios usam river_water), entao toda
--- default:water_source / default:water_flowing acima de water_level e
--- artificial. Este comando remove exatamente isso, numa faixa de Y, em pedacos
--- pequenos por passo do servidor para nao travar o jogo.
+--   mar   - default:water_source/flowing e as variantes "mar" do agua_regional,
+--           SOMENTE acima do nivel do mar. No mapa gerado agua do mar nunca
+--           existe acima do nivel do mar (rios usam river_water), entao isso
+--           desfaz as inundacoes da versao antiga do river_flow sem tocar no mar.
+--   rio   - default:river_water_source/flowing e as variantes "rio", em
+--           qualquer altura da faixa. Atencao: remove rios naturais da area.
+--   todas - os dois, cada um com sua regra.
 --
--- Nao toca em: agua de rio, mar no nivel do mar ou abaixo, variantes do
--- agua_regional, e nada fora da faixa de Y (planetas em outras altitudes).
+-- Nada fora da faixa de Y e tocado (planetas em outras altitudes).
 
 local SEA_LEVEL = tonumber(minetest.settings:get("water_level")) or 1
 local DEFAULT_YMIN = SEA_LEVEL + 1
@@ -18,32 +19,47 @@ local MAX_RADIUS = 5000
 local CHUNK = 64
 local BUDGET_US = 40000 -- tempo maximo por passo do servidor (40 ms)
 
-local c_air, c_source, c_flowing
+local FAMILY_LABEL = { mar = "agua do mar", rio = "agua de rio", todas = "agua do mar e de rio" }
+
+local c_air
+local sea_ids, river_ids = {}, {}
 minetest.register_on_mods_loaded(function()
 	c_air = minetest.get_content_id("air")
-	c_source = minetest.get_content_id("default:water_source")
-	c_flowing = minetest.get_content_id("default:water_flowing")
+	for name in pairs(minetest.registered_nodes) do
+		if name == "default:water_source" or name == "default:water_flowing"
+			or name:match("^agua_regional:mar_%d+_") then
+			sea_ids[minetest.get_content_id(name)] = true
+		elseif name == "default:river_water_source" or name == "default:river_water_flowing"
+			or name:match("^agua_regional:rio_%d+_") then
+			river_ids[minetest.get_content_id(name)] = true
+		end
+	end
 end)
 
 local job -- um trabalho por vez
 
-local function process_chunk(minp, maxp, remove)
+local function process_chunk(minp, maxp, remove, family)
 	local vm = minetest.get_voxel_manip()
 	local emin, emax = vm:read_from_map(minp, maxp)
 	local va = VoxelArea:new({ MinEdge = emin, MaxEdge = emax })
 	local data = vm:get_data()
 	local found = 0
+	local want_sea = family ~= "rio"
+	local want_river = family ~= "mar"
 
 	for z = minp.z, maxp.z do
 		for y = minp.y, maxp.y do
-			local i = va:index(minp.x, y, z)
-			for _ = minp.x, maxp.x do
-				local c = data[i]
-				if c == c_source or c == c_flowing then
-					found = found + 1
-					if remove then data[i] = c_air end
+			local sea_ok = want_sea and y > SEA_LEVEL
+			if sea_ok or want_river then
+				local i = va:index(minp.x, y, z)
+				for _ = minp.x, maxp.x do
+					local c = data[i]
+					if (sea_ok and sea_ids[c]) or (want_river and river_ids[c]) then
+						found = found + 1
+						if remove then data[i] = c_air end
+					end
+					i = i + 1
 				end
-				i = i + 1
 			end
 		end
 	end
@@ -51,7 +67,7 @@ local function process_chunk(minp, maxp, remove)
 	if remove and found > 0 then
 		vm:set_data(data)
 		vm:write_to_map(true)
-		-- Faz a agua corrente vizinha (fora da faixa) secar sozinha.
+		-- Faz a agua corrente vizinha (fora da area) secar sozinha.
 		vm:update_liquids()
 	end
 	return found
@@ -81,9 +97,9 @@ minetest.register_globalstep(function()
 	local start = minetest.get_us_time()
 	while minetest.get_us_time() - start < BUDGET_US do
 		if job.index >= job.total then
-			finish(("%s concluida: %d blocos de agua do mar acima do nivel do mar %s."):format(
-				job.remove and "Limpeza" or "Contagem", job.found,
-				job.remove and "removidos" or "encontrados"))
+			finish(("%s concluida: %d blocos de %s %s."):format(
+				job.remove and "Remocao" or "Contagem", job.found,
+				FAMILY_LABEL[job.family], job.remove and "removidos" or "encontrados"))
 			return
 		end
 		local k = job.index
@@ -91,7 +107,7 @@ minetest.register_globalstep(function()
 		local iy = math.floor(k / job.nx) % job.ny
 		local iz = math.floor(k / (job.nx * job.ny))
 		local minp, maxp = chunk_bounds(job, ix, iy, iz)
-		job.found = job.found + process_chunk(minp, maxp, job.remove)
+		job.found = job.found + process_chunk(minp, maxp, job.remove, job.family)
 		job.index = k + 1
 
 		local pct = math.floor(job.index * 100 / job.total)
@@ -102,17 +118,17 @@ minetest.register_globalstep(function()
 	end
 end)
 
-local USAGE = "/agua_limpar <contar|remover|parar> [raio|sel] [ymin] [ymax]"
+local USAGE = "/agua_limpar <contar|remover|parar> [raio|sel] [ymin] [ymax] [mar|rio|todas]"
 
 minetest.register_chatcommand("agua_limpar", {
-	params = "<contar|remover|parar> [raio|sel] [ymin] [ymax]",
-	description = "Conta ou remove agua do MAR acima do nivel do mar (inundacoes do river_flow antigo). "
-		.. "Padrao: raio " .. DEFAULT_RADIUS .. ", Y " .. DEFAULT_YMIN .. " a " .. DEFAULT_YMAX .. ". "
-		.. "Nao mexe em rios nem no mar.",
+	params = "<contar|remover|parar> [raio|sel] [ymin] [ymax] [mar|rio|todas]",
+	description = "Conta ou remove agua numa area. mar (padrao): so acima do nivel do mar, "
+		.. "desfaz as inundacoes do river_flow antigo. rio: remove agua de rio, inclusive rios naturais. "
+		.. "Padrao: raio " .. DEFAULT_RADIUS .. ", Y " .. DEFAULT_YMIN .. " a " .. DEFAULT_YMAX .. ".",
 	privs = { server = true },
 	func = function(name, param)
-		local args = param:split(" ")
-		local mode = args[1]
+		local raw = param:split(" ")
+		local mode = raw[1]
 
 		if mode == "parar" then
 			if not job then return false, "Nenhuma limpeza em andamento." end
@@ -127,15 +143,26 @@ minetest.register_chatcommand("agua_limpar", {
 			return false, "Ja existe uma limpeza em andamento (use /agua_limpar parar)."
 		end
 
+		-- O tipo de agua pode vir em qualquer posicao depois do modo.
+		local family = "mar"
+		local args = { mode }
+		for i = 2, #raw do
+			if FAMILY_LABEL[raw[i]] then
+				family = raw[i]
+			else
+				args[#args + 1] = raw[i]
+			end
+		end
+
 		local player = minetest.get_player_by_name(name)
 		if not player then return false, "Jogador nao encontrado." end
 
 		local ymin = tonumber(args[3]) or DEFAULT_YMIN
 		local ymax = tonumber(args[4]) or DEFAULT_YMAX
-		if ymin <= SEA_LEVEL then
-			return false, ("ymin precisa ser acima do nivel do mar (%d), senao apagaria o mar."):format(SEA_LEVEL)
+		if ymax < ymin then return false, "Altura maxima menor que a minima." end
+		if family == "mar" and ymax <= SEA_LEVEL then
+			return false, ("Agua do mar so e removida acima do nivel do mar (%d)."):format(SEA_LEVEL)
 		end
-		if ymax < ymin then return false, "ymax menor que ymin." end
 
 		local minp, maxp
 		if args[2] == "sel" then
@@ -145,8 +172,8 @@ minetest.register_chatcommand("agua_limpar", {
 			if not (p1 and p2) then
 				return false, "Nenhuma selecao do WorldEdit (//pos1 e //pos2)."
 			end
-			minp = vector.new(math.min(p1.x, p2.x), math.min(p1.y, p2.y), math.min(p1.z, p2.z))
-			maxp = vector.new(math.max(p1.x, p2.x), math.max(p1.y, p2.y), math.max(p1.z, p2.z))
+			minp = vector.new(math.min(p1.x, p2.x), math.max(math.min(p1.y, p2.y), ymin), math.min(p1.z, p2.z))
+			maxp = vector.new(math.max(p1.x, p2.x), math.min(math.max(p1.y, p2.y), ymax), math.max(p1.z, p2.z))
 		else
 			local radius = tonumber(args[2] or DEFAULT_RADIUS)
 			if not radius or radius < 1 or radius > MAX_RADIUS then
@@ -154,33 +181,28 @@ minetest.register_chatcommand("agua_limpar", {
 			end
 			radius = math.floor(radius)
 			local c = vector.round(player:get_pos())
-			minp = vector.new(c.x - radius, 0, c.z - radius)
-			maxp = vector.new(c.x + radius, 0, c.z + radius)
-		end
-		-- A faixa de Y sempre limita, inclusive dentro da selecao.
-		if args[2] == "sel" then
-			minp.y = math.max(minp.y, ymin)
-			maxp.y = math.min(maxp.y, ymax)
-		else
-			minp.y, maxp.y = ymin, ymax
+			minp = vector.new(c.x - radius, ymin, c.z - radius)
+			maxp = vector.new(c.x + radius, ymax, c.z + radius)
 		end
 		if maxp.y < minp.y then
-			return false, "A selecao esta fora da faixa de Y " .. ymin .. " a " .. ymax .. "."
+			return false, "A selecao esta fora da faixa de altura " .. ymin .. " a " .. ymax .. "."
 		end
 
 		local nx = math.ceil((maxp.x - minp.x + 1) / CHUNK)
 		local ny = math.ceil((maxp.y - minp.y + 1) / CHUNK)
 		local nz = math.ceil((maxp.z - minp.z + 1) / CHUNK)
 		job = {
-			owner = name, remove = mode == "remover",
+			owner = name, remove = mode == "remover", family = family,
 			minp = minp, maxp = maxp,
 			nx = nx, ny = ny, total = nx * ny * nz,
 			index = 0, found = 0, next_report = 10,
 		}
-		minetest.log("action", ("[agua_regional] %s iniciou /agua_limpar %s em %s-%s"):format(
-			name, mode, minetest.pos_to_string(minp), minetest.pos_to_string(maxp)))
-		return true, ("%s agua do mar entre %s e %s (%d pedacos). Acompanhe o progresso no chat.")
-			:format(mode == "remover" and "Removendo" or "Contando",
-				minetest.pos_to_string(minp), minetest.pos_to_string(maxp), job.total)
+		minetest.log("action", ("[agua_regional] %s iniciou /agua_limpar %s %s em %s-%s"):format(
+			name, mode, family, minetest.pos_to_string(minp), minetest.pos_to_string(maxp)))
+		local aviso = (family ~= "mar" and mode == "remover")
+			and " Atencao: rios naturais da area tambem serao removidos." or ""
+		return true, ("%s %s entre %s e %s (%d pedacos). Acompanhe o progresso no chat.%s")
+			:format(mode == "remover" and "Removendo" or "Contando", FAMILY_LABEL[family],
+				minetest.pos_to_string(minp), minetest.pos_to_string(maxp), job.total, aviso)
 	end,
 })

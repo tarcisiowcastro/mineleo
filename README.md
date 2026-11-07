@@ -88,8 +88,8 @@ O servidor vem com mods de animais e barco, buscados via `scripts/install-mods.s
   - **Construção**: trilhos, cavar túnel, ladeira, replicar bloco da mão,
     desfazer (campos de quantidade, altura e largura).
   - **Água**: alcance do escoamento (1 a 8 ou padrão, rio/mar, seleção do
-    WorldEdit ou raio), ver alcance local, contar/remover/parar a limpeza de
-    inundação (raio, altura mínima e máxima).
+    WorldEdit ou raio), ver alcance local, contar/remover/parar a remoção de
+    água (mar, rio ou ambos; área, raio, altura mínima e máxima).
   - **Mundo**: dia fixo liga/desliga/estado, turbo, povoar vilas, apagar tudo
     na seleção do WorldEdit.
   - **Casas e bichos**: catálogo de casas, recolher deed, invocar animais e
@@ -107,14 +107,19 @@ O servidor vem com mods de animais e barco, buscados via `scripts/install-mods.s
   - `/agua_alcance 5 sel mar` — só água do mar, na seleção do WorldEdit.
   - `/agua_alcance padrao` — volta a área ao padrão (rio 2, mar 8).
   - `/agua_info` — mostra o alcance da água onde você está.
-  - `/agua_limpar contar 2000` / `/agua_limpar remover 2000` — conta/remove
-    água do **mar** (`default:water_source`/`water_flowing`) acima do nível do
-    mar, num raio em volta de você (ou `sel` para a seleção do WorldEdit),
-    entre Y `water_level+1` e 256 (ajustável: `/agua_limpar remover 2000 2 120`).
-    Serve para desfazer as inundações do `river_flow` antigo: no mapa gerado
-    essa água não existe naturalmente (rios usam `river_water`). Também apaga
-    água de balde colocada acima do nível do mar. Roda em pedaços, sem travar
-    o servidor; `/agua_limpar parar` interrompe. Faça backup antes.
+  - `/agua_limpar <contar|remover|parar> [raio|sel] [ymin] [ymax] [mar|rio|todas]`
+    — conta/remove água numa área (raio em volta de você ou `sel` para a
+    seleção do WorldEdit), entre Y `water_level+1` e 256 por padrão.
+    - `mar` (padrão): água do mar e suas variantes, **só acima do nível do
+      mar**. Desfaz as inundações do `river_flow` antigo sem tocar no mar (no
+      mapa gerado essa água não existe naturalmente). Também apaga água de
+      balde acima do nível do mar.
+    - `rio`: água de rio e suas variantes em qualquer altura da faixa —
+      **remove rios naturais** da área.
+    - `todas`: os dois, cada um com sua regra.
+    Ex.: `/agua_limpar remover 2000`, `/agua_limpar remover sel rio`,
+    `/agua_limpar contar 300 -20 120 todas`. Roda em pedaços, sem travar o
+    servidor; `/agua_limpar parar` interrompe. Faça backup antes.
   A água que escorre de uma fonte alterada herda o mesmo alcance. Não remova
   o mod depois de usar: os blocos alterados virariam "unknown node".
 - **Escrituras de casas** (`garrafa_tesouro`) — cada casa recebe uma placa

@@ -13,6 +13,8 @@ local ALCANCE_LABELS = { "1", "2", "3", "4", "5", "6", "7", "8", "Padrão (rio 2
 local TIPOS = { "todas", "rio", "mar" }
 local TIPO_LABELS = { "Rio e mar", "Só rio", "Só mar" }
 local AREA_LABELS = { "Seleção do WorldEdit", "Raio em volta de mim" }
+local L_TIPOS = { "mar", "rio", "todas" }
+local L_TIPO_LABELS = { "Só mar", "Só rio", "Rio e mar" }
 
 local ITENS = {
 	{ "pescaria:vara", "Vara de pesca" },
@@ -31,7 +33,7 @@ local function get_state(name)
 			tab = 1, status = "",
 			qtd = "10", altura = "2", largura = "1",
 			alcance = 8, tipo = 1, area = 2, raio = "16",
-			l_area = 2, l_raio = "64", ymin = "2", ymax = "256",
+			l_tipo = 1, l_area = 2, l_raio = "64", ymin = "2", ymax = "256",
 			item_qtd = "1",
 		}
 		state[name] = s
@@ -117,17 +119,19 @@ pages[2] = function(s)
 		button(0.5, 2.7, 4.2, "b_alcance", "Aplicar alcance"),
 		button(5.0, 2.7, 4.2, "b_agua_info", "Ver alcance onde estou"),
 
-		section(0.5, 4.2, "Limpar inundação (água do mar acima do nível do mar)"),
-		label(0.5, 4.8, "Área"),
-		dropdown(0.5, 5.0, 3.6, "l_area", AREA_LABELS, s.l_area),
-		field(4.4, 5.0, 2.4, "l_raio", "Raio", s.l_raio),
-		field(7.1, 5.0, 2.4, "ymin", "Altura mínima", s.ymin),
-		field(9.8, 5.0, 2.4, "ymax", "Altura máxima", s.ymax),
+		section(0.5, 4.2, "Remover água"),
+		label(0.5, 4.8, "Tipo de água"),
+		dropdown(0.5, 5.0, 2.6, "l_tipo", L_TIPO_LABELS, s.l_tipo),
+		label(3.4, 4.8, "Área"),
+		dropdown(3.4, 5.0, 3.6, "l_area", AREA_LABELS, s.l_area),
+		field(7.3, 5.0, 1.8, "l_raio", "Raio", s.l_raio),
+		field(9.4, 5.0, 1.8, "ymin", "Altura mín.", s.ymin),
+		field(11.5, 5.0, 1.8, "ymax", "Altura máx.", s.ymax),
 		button(0.5, 6.1, 3.6, "b_limpar_contar", "Só contar"),
 		button(4.4, 6.1, 3.6, "b_limpar_remover", "Remover água"),
 		button(8.3, 6.1, 3.6, "b_limpar_parar", "Parar"),
-		label(0.5, 7.3, "Não mexe em rios, no mar no nível do mar nem nas águas com alcance alterado."),
-		label(0.5, 7.8, "Faça backup do mundo antes de remover. O progresso aparece no chat."),
+		label(0.5, 7.3, "Mar: só acima do nível do mar (desfaz inundações, o mar fica). Rio: remove"),
+		label(0.5, 7.8, "rios inteiros na área, inclusive naturais. Faça backup antes de remover."),
 	})
 end
 
@@ -224,7 +228,8 @@ actions.b_agua_info = function(n) return run(n, "agua_info", "") end
 local function limpar(mode)
 	return function(n, s)
 		local area = s.l_area == 1 and "sel" or tostring(int_or(s.l_raio, 64))
-		return run(n, "agua_limpar", ("%s %s %d %d"):format(mode, area, int_or(s.ymin, 2), int_or(s.ymax, 256)))
+		return run(n, "agua_limpar", ("%s %s %d %d %s"):format(
+			mode, area, int_or(s.ymin, 2), int_or(s.ymax, 256), L_TIPOS[s.l_tipo]))
 	end
 end
 actions.b_limpar_contar = limpar("contar")
@@ -283,6 +288,7 @@ end
 local TEXT_FIELDS = { "qtd", "altura", "largura", "raio", "l_raio", "ymin", "ymax", "item_qtd" }
 local DROPDOWNS = {
 	alcance = #ALCANCE_LABELS, tipo = #TIPO_LABELS, area = #AREA_LABELS, l_area = #AREA_LABELS,
+	l_tipo = #L_TIPO_LABELS,
 }
 
 minetest.register_on_player_receive_fields(function(player, formname, fields)
