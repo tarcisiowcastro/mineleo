@@ -11,10 +11,10 @@ local TABS = { "Construção", "Água", "Mundo", "Casas e bichos", "Itens" }
 local ALCANCES = { "1", "2", "3", "4", "5", "6", "7", "8", "padrao" }
 local ALCANCE_LABELS = { "1", "2", "3", "4", "5", "6", "7", "8", "Padrão (rio 2, mar 8)" }
 local TIPOS = { "todas", "rio", "mar" }
-local TIPO_LABELS = { "Rio e mar", "Só rio", "Só mar" }
+local TIPO_LABELS = { "Todas as águas", "Só rio", "Mar e planetas" }
 local AREA_LABELS = { "Seleção do WorldEdit", "Raio em volta de mim" }
 local L_TIPOS = { "mar", "rio", "todas" }
-local L_TIPO_LABELS = { "Só mar", "Só rio", "Rio e mar" }
+local L_TIPO_LABELS = { "Mar e planetas", "Só rio", "Todas as águas" }
 
 local ITENS = {
 	{ "pescaria:vara", "Vara de pesca" },
@@ -33,7 +33,7 @@ local function get_state(name)
 			tab = 1, status = "",
 			qtd = "10", altura = "2", largura = "1",
 			alcance = 8, tipo = 1, area = 2, raio = "16",
-			l_tipo = 1, l_area = 2, l_raio = "64", ymin = "2", ymax = "256",
+			l_tipo = 1, l_area = 2, l_raio = "64", ymin = "", ymax = "", nivel = "",
 			item_qtd = "1",
 		}
 		state[name] = s
@@ -117,21 +117,24 @@ pages[2] = function(s)
 		dropdown(6.9, 1.6, 3.6, "area", AREA_LABELS, s.area),
 		field(10.8, 1.6, 2.4, "raio", "Raio", s.raio),
 		button(0.5, 2.7, 4.2, "b_alcance", "Aplicar alcance"),
-		button(5.0, 2.7, 4.2, "b_agua_info", "Ver alcance onde estou"),
+		button(5.0, 2.7, 4.2, "b_agua_info", "Ver água para onde olho"),
 
-		section(0.5, 4.2, "Remover água"),
-		label(0.5, 4.8, "Tipo de água"),
-		dropdown(0.5, 5.0, 2.6, "l_tipo", L_TIPO_LABELS, s.l_tipo),
-		label(3.4, 4.8, "Área"),
-		dropdown(3.4, 5.0, 3.6, "l_area", AREA_LABELS, s.l_area),
-		field(7.3, 5.0, 1.8, "l_raio", "Raio", s.l_raio),
-		field(9.4, 5.0, 1.8, "ymin", "Altura mín.", s.ymin),
-		field(11.5, 5.0, 1.8, "ymax", "Altura máx.", s.ymax),
-		button(0.5, 6.1, 3.6, "b_limpar_contar", "Só contar"),
-		button(4.4, 6.1, 3.6, "b_limpar_remover", "Remover água"),
-		button(8.3, 6.1, 3.6, "b_limpar_parar", "Parar"),
-		label(0.5, 7.3, "Mar: só acima do nível do mar (desfaz inundações, o mar fica). Rio: remove"),
-		label(0.5, 7.8, "rios inteiros na área, inclusive naturais. Faça backup antes de remover."),
+		section(0.5, 3.9, "Remover água"),
+		label(0.5, 4.5, "Tipo de água"),
+		dropdown(0.5, 4.7, 2.6, "l_tipo", L_TIPO_LABELS, s.l_tipo),
+		label(3.4, 4.5, "Área"),
+		dropdown(3.4, 4.7, 3.6, "l_area", AREA_LABELS, s.l_area),
+		field(7.3, 4.7, 1.8, "l_raio", "Raio", s.l_raio),
+		field(9.4, 4.7, 1.8, "ymin", "Altura mín.", s.ymin),
+		field(11.5, 4.7, 1.8, "ymax", "Altura máx.", s.ymax),
+		field(0.5, 6.0, 2.6, "nivel", "Nível do mar", s.nivel),
+		button(3.4, 6.0, 2.6, "b_detectar_nivel", "Detectar nível"),
+		button(6.2, 6.0, 2.4, "b_limpar_contar", "Só contar"),
+		button(8.8, 6.0, 2.4, "b_limpar_remover", "Remover"),
+		button(11.4, 6.0, 1.9, "b_limpar_parar", "Parar"),
+		label(0.5, 7.2, "Em branco = automático. Na Terra usa o nível do mar do mundo; num planeta,"),
+		label(0.5, 7.6, "fique sobre o oceano e clique em Detectar nível. Mar nunca é removido abaixo"),
+		label(0.5, 8.0, "do nível. Rio remove rios inteiros, inclusive naturais. Faça backup antes."),
 	})
 end
 
@@ -228,13 +231,28 @@ actions.b_agua_info = function(n) return run(n, "agua_info", "") end
 local function limpar(mode)
 	return function(n, s)
 		local area = s.l_area == 1 and "sel" or tostring(int_or(s.l_raio, 64))
-		return run(n, "agua_limpar", ("%s %s %d %d %s"):format(
-			mode, area, int_or(s.ymin, 2), int_or(s.ymax, 256), L_TIPOS[s.l_tipo]))
+		local ymin = tonumber(s.ymin) and tostring(math.floor(tonumber(s.ymin))) or "auto"
+		local ymax = tonumber(s.ymax) and tostring(math.floor(tonumber(s.ymax))) or "auto"
+		local nivel = tonumber(s.nivel) and (" nivel=" .. math.floor(tonumber(s.nivel))) or ""
+		return run(n, "agua_limpar", ("%s %s %s %s %s%s"):format(
+			mode, area, ymin, ymax, L_TIPOS[s.l_tipo], nivel))
 	end
 end
 actions.b_limpar_contar = limpar("contar")
 actions.b_limpar_remover = limpar("remover")
 actions.b_limpar_parar = function(n) return run(n, "agua_limpar", "parar") end
+actions.b_detectar_nivel = function(n, s)
+	if not (minetest.global_exists("agua_regional") and agua_regional.water_surface) then
+		return false, "Recurso indisponível (agua_regional não está carregado)."
+	end
+	local player = minetest.get_player_by_name(n)
+	local y = player and agua_regional.water_surface(player:get_pos())
+	if not y then
+		return false, "Nenhuma água embaixo de você. Fique em cima do oceano (ou dentro dele) e tente de novo."
+	end
+	s.nivel = tostring(y)
+	return true, "Nível do mar detectado: Y " .. y .. "."
+end
 
 actions.b_dia_on = function(n) return run(n, "dia_fixo", "on") end
 actions.b_dia_off = function(n) return run(n, "dia_fixo", "off") end
@@ -285,7 +303,7 @@ local function give_item(name, s, index)
 	return true, ("Você recebeu %d x %s."):format(qtd, it[2])
 end
 
-local TEXT_FIELDS = { "qtd", "altura", "largura", "raio", "l_raio", "ymin", "ymax", "item_qtd" }
+local TEXT_FIELDS = { "qtd", "altura", "largura", "raio", "l_raio", "ymin", "ymax", "nivel", "item_qtd" }
 local DROPDOWNS = {
 	alcance = #ALCANCE_LABELS, tipo = #TIPO_LABELS, area = #AREA_LABELS, l_area = #AREA_LABELS,
 	l_tipo = #L_TIPO_LABELS,

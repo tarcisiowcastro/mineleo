@@ -99,17 +99,24 @@ O servidor vem com mods de animais e barco, buscados via `scripts/install-mods.s
   Cada botão chama o comando por baixo, então os privilégios continuam os
   mesmos. Os comandos de chat continuam funcionando.
 - **`agua_regional`** (mod próprio) — alcance de escoamento da água por área.
-  Cria variantes visualmente idênticas da água do mar e do rio com alcance
-  1 a 8 e troca a água de uma área pela variante escolhida (priv `server`):
+  Reconhece toda água registrada por qualquer mod (mar, rio e as águas dos
+  planetas; a lista sai no log ao iniciar: `aguas reconhecidas`), cria
+  variantes visualmente idênticas com alcance 1 a 8 e troca a água de uma
+  área pela variante escolhida (priv `server`). `mar` = mar e águas dos
+  planetas; `rio` = água de rio:
   - `/agua_alcance 8` — alcance 8 na seleção do WorldEdit (`//pos1`/`//pos2`),
     ou num raio de 16 em volta de você se não houver seleção.
   - `/agua_alcance 8 30 rio` — só água de rio, raio 30.
   - `/agua_alcance 5 sel mar` — só água do mar, na seleção do WorldEdit.
   - `/agua_alcance padrao` — volta a área ao padrão (rio 2, mar 8).
-  - `/agua_info` — mostra o alcance da água onde você está.
-  - `/agua_limpar <contar|remover|parar> [raio|sel] [ymin] [ymax] [mar|rio|todas]`
+  - `/agua_info` — tipo, alcance e altura da superfície da água para onde
+    você olha (até 20 blocos) ou onde você está.
+  - `/agua_limpar <contar|remover|parar> [raio|sel] [ymin|auto] [ymax|auto] [mar|rio|todas] [nivel=Y]`
     — conta/remove água numa área (raio em volta de você ou `sel` para a
-    seleção do WorldEdit), entre Y `water_level+1` e 256 por padrão.
+    seleção do WorldEdit). Alturas `auto`: na Terra, de `water_level+1` a 256;
+    fora da Terra (acima de Y `water_level+1000`), 64 blocos abaixo e acima de
+    você. Fora da Terra, `mar` exige `nivel=Y` (nível do mar do planeta; o
+    painel detecta com "Detectar nível" em cima do oceano).
     - `mar` (padrão): água do mar e suas variantes, **só acima do nível do
       mar**. Desfaz as inundações do `river_flow` antigo sem tocar no mar (no
       mapa gerado essa água não existe naturalmente). Também apaga água de
@@ -118,7 +125,8 @@ O servidor vem com mods de animais e barco, buscados via `scripts/install-mods.s
       **remove rios naturais** da área.
     - `todas`: os dois, cada um com sua regra.
     Ex.: `/agua_limpar remover 2000`, `/agua_limpar remover sel rio`,
-    `/agua_limpar contar 300 -20 120 todas`. Roda em pedaços, sem travar o
+    `/agua_limpar contar 300 -20 120 todas`,
+    `/agua_limpar remover 200 auto auto mar nivel=5040` (num planeta). Roda em pedaços, sem travar o
     servidor; `/agua_limpar parar` interrompe. Faça backup antes.
   A água que escorre de uma fonte alterada herda o mesmo alcance. Não remova
   o mod depois de usar: os blocos alterados virariam "unknown node".

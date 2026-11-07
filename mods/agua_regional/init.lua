@@ -1,37 +1,74 @@
 -- O alcance de escoamento (liquid_range) no Luanti pertence ao TIPO de bloco,
 -- nao a posicao. Para ter alcances diferentes em lugares diferentes, este mod
--- registra variantes visuais identicas da agua do mar e do rio com alcances
--- de 1 a 8, e um comando que troca a agua de uma area pela variante desejada.
+-- registra variantes visuais identicas de cada agua do jogo (mar, rio e as
+-- aguas de outros mods, como as dos planetas) com alcances de 1 a 8, e um
+-- comando que troca a agua de uma area pela variante desejada.
 --
 -- Padrao do jogo: agua de rio = 2, agua do mar = 8.
-
-dofile(minetest.get_modpath("agua_regional") .. "/limpeza.lua")
 
 local MIN_RANGE, MAX_RANGE = 1, 8
 local MAX_VOLUME = 4000000
 local DEFAULT_RADIUS = 16
+local SEA_LEVEL = tonumber(minetest.settings:get("water_level")) or 1
+-- Acima disto o jogador esta fora da Terra (camadas do other_worlds, planetas).
+local TERRA_TOP = SEA_LEVEL + 1000
 
-local FAMILIES = {
-	rio = {
-		source = "default:river_water_source",
-		flowing = "default:river_water_flowing",
-		label = "Agua de rio",
-	},
-	mar = {
-		source = "default:water_source",
-		flowing = "default:water_flowing",
-		label = "Agua",
-	},
+agua_regional = {
+	SEA_LEVEL = SEA_LEVEL,
+	families = {},   -- id -> { source, flowing, label, kind = "mar"|"rio", base_range }
+	by_cid = {},     -- content id -> { family = id, kind = "mar"|"rio", source = bool }
 }
+local FAMILIES = agua_regional.families
 
-local function variant_names(family, range)
-	local fam = FAMILIES[family]
-	local base_range = minetest.registered_nodes[fam.source].liquid_range or 8
-	if range == base_range then
+function agua_regional.on_terra(pos)
+	return pos.y < TERRA_TOP
+end
+
+-- Descobre as aguas registradas por qualquer mod. Roda no carregamento deste
+-- mod; os mods que registram agua estao em optional_depends para carregar antes.
+local function is_water_source(name, def)
+	if def.liquidtype ~= "source" then return false end
+	if name:find("^agua_regional:") then return false end
+	if minetest.get_item_group(name, "lava") > 0 or name:find("lava") then return false end
+	local flowing = def.liquid_alternative_flowing
+	if not (flowing and minetest.registered_nodes[flowing]) then return false end
+	return minetest.get_item_group(name, "water") > 0 or name:find("water") or name:find("agua")
+end
+
+local found = {}
+for name, def in pairs(minetest.registered_nodes) do
+	if is_water_source(name, def) then found[#found + 1] = name end
+end
+table.sort(found)
+
+for _, name in ipairs(found) do
+	local def = minetest.registered_nodes[name]
+	local id
+	if name == "default:water_source" then
+		id = "mar"
+	elseif name == "default:river_water_source" then
+		id = "rio"
+	else
+		id = name:gsub("_source$", ""):gsub("[^%w]", "_")
+	end
+	if not FAMILIES[id] then
+		FAMILIES[id] = {
+			source = name,
+			flowing = def.liquid_alternative_flowing,
+			label = (def.description or name):match("^[^\n]*"),
+			kind = name:find("river") and "rio" or "mar",
+			base_range = def.liquid_range or 8,
+		}
+	end
+end
+
+local function variant_names(id, range)
+	local fam = FAMILIES[id]
+	if range == "padrao" or range == fam.base_range then
 		return fam.source, fam.flowing
 	end
-	return "agua_regional:" .. family .. "_" .. range .. "_source",
-		"agua_regional:" .. family .. "_" .. range .. "_flowing"
+	return "agua_regional:" .. id .. "_" .. range .. "_source",
+		"agua_regional:" .. id .. "_" .. range .. "_flowing"
 end
 
 local function copy_node(base, name, range, src_name, flow_name, label)
@@ -48,9 +85,9 @@ local function copy_node(base, name, range, src_name, flow_name, label)
 	minetest.register_node(":" .. name, def)
 end
 
-for family, fam in pairs(FAMILIES) do
+for id, fam in pairs(FAMILIES) do
 	for range = MIN_RANGE, MAX_RANGE do
-		local src, flow = variant_names(family, range)
+		local src, flow = variant_names(id, range)
 		if src ~= fam.source then
 			copy_node(fam.source, src, range, src, flow, fam.label)
 			copy_node(fam.flowing, flow, range, src, flow, fam.label .. " corrente")
@@ -67,17 +104,43 @@ for family, fam in pairs(FAMILIES) do
 	end
 end
 
--- content id -> { family = "rio"/"mar", source = bool }
-local lookup = {}
 minetest.register_on_mods_loaded(function()
-	for family in pairs(FAMILIES) do
+	local names = {}
+	for id, fam in pairs(FAMILIES) do
+		names[#names + 1] = fam.source
 		for range = MIN_RANGE, MAX_RANGE do
-			local src, flow = variant_names(family, range)
-			lookup[minetest.get_content_id(src)] = { family = family, source = true }
-			lookup[minetest.get_content_id(flow)] = { family = family, source = false }
+			local src, flow = variant_names(id, range)
+			agua_regional.by_cid[minetest.get_content_id(src)] = { family = id, kind = fam.kind, source = true }
+			agua_regional.by_cid[minetest.get_content_id(flow)] = { family = id, kind = fam.kind, source = false }
 		end
 	end
+	table.sort(names)
+	minetest.log("action", "[agua_regional] aguas reconhecidas: " .. table.concat(names, ", "))
 end)
+
+function agua_regional.water_info(nodename)
+	local cid = minetest.registered_nodes[nodename] and minetest.get_content_id(nodename)
+	return cid and agua_regional.by_cid[cid]
+end
+
+-- Superficie (Y da agua mais alta) da agua em que o jogador esta ou logo
+-- abaixo dele, ate 32 blocos para baixo. nil se nao achar agua.
+function agua_regional.water_surface(pos)
+	local p = vector.round(pos)
+	local function is_water(q) return agua_regional.water_info(minetest.get_node(q).name) ~= nil end
+	if not is_water(p) then
+		local found_y
+		for dy = 1, 32 do
+			local q = vector.offset(p, 0, -dy, 0)
+			if is_water(q) then found_y = q.y break end
+			if minetest.get_node(q).name ~= "air" then return nil end
+		end
+		if not found_y then return nil end
+		return found_y
+	end
+	while is_water(vector.offset(p, 0, 1, 0)) do p.y = p.y + 1 end
+	return p.y
+end
 
 local function sort_area(a, b)
 	return vector.new(math.min(a.x, b.x), math.min(a.y, b.y), math.min(a.z, b.z)),
@@ -109,18 +172,16 @@ local function get_area(name, area_arg)
 	return vector.subtract(center, radius), vector.add(center, radius)
 end
 
-local function apply(minp, maxp, family_filter, range)
+local function apply(minp, maxp, kind_filter, range)
 	local volume = (maxp.x - minp.x + 1) * (maxp.y - minp.y + 1) * (maxp.z - minp.z + 1)
 	if volume > MAX_VOLUME then
 		return nil, "Area grande demais (" .. volume .. " blocos, maximo " .. MAX_VOLUME .. ")."
 	end
 
 	local targets = {}
-	for family in pairs(FAMILIES) do
-		local src, flow = variant_names(family, range == "padrao"
-			and (minetest.registered_nodes[FAMILIES[family].source].liquid_range or 8)
-			or range)
-		targets[family] = {
+	for id in pairs(FAMILIES) do
+		local src, flow = variant_names(id, range)
+		targets[id] = {
 			source = minetest.get_content_id(src),
 			flowing = minetest.get_content_id(flow),
 		}
@@ -131,13 +192,14 @@ local function apply(minp, maxp, family_filter, range)
 	local va = VoxelArea:new({ MinEdge = emin, MaxEdge = emax })
 	local data = vm:get_data()
 	local changed = 0
+	local by_cid = agua_regional.by_cid
 
 	for z = minp.z, maxp.z do
 		for y = minp.y, maxp.y do
 			local i = va:index(minp.x, y, z)
 			for _ = minp.x, maxp.x do
-				local info = lookup[data[i]]
-				if info and (family_filter == "todas" or family_filter == info.family) then
+				local info = by_cid[data[i]]
+				if info and (kind_filter == "todas" or kind_filter == info.kind) then
 					local t = targets[info.family]
 					local new = info.source and t.source or t.flowing
 					if data[i] ~= new then
@@ -158,21 +220,22 @@ local function apply(minp, maxp, family_filter, range)
 	return changed
 end
 
+local KINDS = { todas = true, rio = true, mar = true }
 local USAGE = "/agua_alcance <1-8|padrao> [raio|sel] [rio|mar|todas]"
 
 minetest.register_chatcommand("agua_alcance", {
 	params = "<1-8|padrao> [raio|sel] [rio|mar|todas]",
 	description = "Define o alcance de escoamento da agua numa area. "
 		.. "Sem area: usa a selecao do WorldEdit, ou raio " .. DEFAULT_RADIUS .. ". "
-		.. "Padrao do jogo: rio=2, mar=8.",
+		.. "mar inclui as aguas dos planetas. Padrao do jogo: rio=2, mar=8.",
 	privs = { server = true },
 	func = function(name, param)
 		local args = param:split(" ")
-		local range_arg, area_arg, family = args[1], args[2], args[3] or "todas"
+		local range_arg, area_arg, kind = args[1], args[2], args[3] or "todas"
 
 		-- Permite "/agua_alcance 8 rio" sem informar a area.
-		if area_arg and (FAMILIES[area_arg] or area_arg == "todas") then
-			family, area_arg = area_arg, nil
+		if area_arg and KINDS[area_arg] then
+			kind, area_arg = area_arg, nil
 		end
 
 		local range
@@ -184,38 +247,64 @@ minetest.register_chatcommand("agua_alcance", {
 				return false, "Uso: " .. USAGE
 			end
 		end
-		if family ~= "todas" and not FAMILIES[family] then
+		if not KINDS[kind] then
 			return false, "Tipo de agua invalido. Use rio, mar ou todas."
 		end
 
 		local minp, maxp = get_area(name, area_arg)
 		if not minp then return false, maxp end
 
-		local changed, err = apply(minp, maxp, family, range)
+		local changed, err = apply(minp, maxp, kind, range)
 		if not changed then return false, err end
 
 		minetest.log("action", ("[agua_regional] %s definiu alcance %s (%s) em %s-%s: %d blocos")
-			:format(name, tostring(range), family,
+			:format(name, tostring(range), kind,
 				minetest.pos_to_string(minp), minetest.pos_to_string(maxp), changed))
+		if changed == 0 then
+			return true, ("Nenhuma agua (%s) encontrada entre %s e %s. Aumente o raio ou confira a selecao.")
+				:format(kind, minetest.pos_to_string(minp), minetest.pos_to_string(maxp))
+		end
 		return true, ("Alcance %s aplicado a %d blocos de agua (%s) entre %s e %s.")
-			:format(tostring(range), changed, family,
+			:format(tostring(range), changed, kind,
 				minetest.pos_to_string(minp), minetest.pos_to_string(maxp))
 	end,
 })
 
+-- Agua para onde o jogador olha (ate 20 blocos) ou onde ele esta.
+local function water_near(player)
+	local eye = vector.offset(player:get_pos(), 0, 1.5, 0)
+	local target = vector.add(eye, vector.multiply(player:get_look_dir(), 20))
+	for pointed in minetest.raycast(eye, target, false, true) do
+		if pointed.type == "node" then
+			local node = minetest.get_node(pointed.under)
+			if agua_regional.water_info(node.name) then return pointed.under, node.name end
+			if node.name ~= "air" and node.name ~= "ignore" then break end
+		end
+	end
+	local pos = vector.round(player:get_pos())
+	for dy = 0, -3, -1 do
+		local p = vector.offset(pos, 0, dy, 0)
+		local node = minetest.get_node(p)
+		if agua_regional.water_info(node.name) then return p, node.name end
+	end
+end
+
 minetest.register_chatcommand("agua_info", {
-	description = "Mostra o alcance da agua onde voce esta (ou logo abaixo).",
+	description = "Mostra o tipo e o alcance da agua para onde voce olha (ou onde esta).",
 	func = function(name)
 		local player = minetest.get_player_by_name(name)
 		if not player then return false, "Jogador nao encontrado." end
-		local pos = vector.round(player:get_pos())
-		for dy = 0, -3, -1 do
-			local node = minetest.get_node(vector.offset(pos, 0, dy, 0))
-			local def = minetest.registered_nodes[node.name]
-			if def and def.liquidtype and def.liquidtype ~= "none" then
-				return true, ("%s: alcance %d"):format(node.name, def.liquid_range or 8)
-			end
+		local pos, nodename = water_near(player)
+		if not pos then
+			return false, "Nenhuma agua reconhecida. Olhe para a agua (ate 20 blocos) ou entre nela."
 		end
-		return false, "Nenhuma agua aqui. Entre na agua ou fique logo acima dela."
+		local info = agua_regional.water_info(nodename)
+		local fam = FAMILIES[info.family]
+		local def = minetest.registered_nodes[nodename]
+		local surface = agua_regional.water_surface(pos)
+		return true, ("%s (%s, tipo %s): alcance %d. Superficie em Y %s."):format(
+			fam.label, nodename, info.kind, def.liquid_range or 8, tostring(surface or "?"))
 	end,
 })
+
+dofile(minetest.get_modpath("agua_regional") .. "/limpeza.lua")
