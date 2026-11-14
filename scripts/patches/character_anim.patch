@@ -1,0 +1,22 @@
+diff --git a/init.lua b/init.lua
+index 4d24262..d8037f0 100644
+--- a/init.lua
++++ b/init.lua
+@@ -16,10 +16,13 @@ for name in pairs(media_paths) do
+ 		local fixed, data = pcall(workaround_model, name)
+ 		if fixed then
+ 			local static_name = "_character_anim_" .. name
+-			minetest.dynamic_add_media({
+-				filename = static_name,
+-				filedata = data,
+-			})
++			-- mineleo: Luanti 5.6 nao tem dynamic_add_media{filedata} nem aceita
++			-- chamada no load; grava no mundo e registra apos o servidor subir.
++			local dir = minetest.get_worldpath() .. "/character_anim_media"
++			minetest.mkdir(dir)
++			local path = dir .. "/" .. static_name
++			local f = assert(io.open(path, "wb")); f:write(data); f:close()
++			minetest.after(0, function() minetest.dynamic_add_media({filepath = path}, function() end) end)
+ 			static_model_names[name] = static_name
+ 			animated_model_names[static_name] = name
+ 		else

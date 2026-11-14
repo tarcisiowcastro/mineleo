@@ -313,7 +313,7 @@ local function house_form(player, pos, house)
 	local owner = can_manage_house(player, house)
 	local guests = table.concat(house.guests or {}, ", ")
 	local built = os.date("%d/%m/%Y %H:%M", house.built_at or os.time())
-	local formspec = "formspec_version[4]size[10,8]" ..
+	local formspec = "formspec_version[4]size[10,8]no_prepend[]bgcolor[#00000080;false]" ..
 		"label[0.5,0.5;Casa: " .. minetest.formspec_escape(house.name or "") .. "]" ..
 		"label[0.5,1.1;Dono: " .. minetest.formspec_escape(house.owner) .. "]" ..
 		"label[0.5,1.6;Construída em: " .. built .. "]" ..
@@ -828,7 +828,8 @@ local function mostrar_catalogo(nome, pagina)
 		if def then
 			local x,y = (i%3)*4, 0.9+math.floor(i/3)*1.7
 			formspec[#formspec+1] = miniatura_real(def, x+.1, y-.1)
-			formspec[#formspec+1] = string.format("button[%0.1f,%0.1f;2.45,0.7;ver_%s;Ver em detalhes]",x+1.45,y,def.id)
+			formspec[#formspec+1] = string.format("button[%0.1f,%0.1f;1.3,0.7;ver_%s;Detalhes]",x+1.45,y,def.id)
+			formspec[#formspec+1] = string.format("button[%0.2f,%0.1f;1.1,0.7;pegar_%s;Pegar]",x+2.8,y,def.id)
 			formspec[#formspec+1] = string.format("label[%0.1f,%0.1f;%s]",x+1.45,y+.75,minetest.formspec_escape(def.nome))
 		end
 	end
@@ -938,6 +939,16 @@ minetest.register_on_joinplayer(function(player)
 	end)
 end)
 
+local function sem_previa(nome, def, motivo)
+	local t = tamanho_esquema(def)
+	minetest.show_formspec(nome, "garrafa_tesouro:preview_"..def.id,
+		"formspec_version[4]size[12,5]label[0.4,0.5;"..minetest.formspec_escape(def.nome).."]"..
+		"label[0.4,1.3;"..minetest.formspec_escape(motivo or "Prévia indisponível para esta estrutura.").."]"..
+		(t and ("label[0.4,1.9;Tamanho: "..t.x.." × "..t.y.." × "..t.z.." blocos]") or "")..
+		"label[0.4,2.5;Você ainda pode pegar o deed normalmente.]"..
+		"button[3.3,3.6;2.4,0.7;pegar_"..def.id..";Pegar deed]button[6.2,3.6;2.4,0.7;voltar;Voltar]")
+end
+
 local function mostrar_previa(nome, def, lado)
 	if def.castelo then
 		local imagem = def.estilo == "bodiam" and "garrafa_tesouro_preview_casa.png"
@@ -952,7 +963,7 @@ local function mostrar_previa(nome, def, lado)
 			"button[3.4,8.8;2.4,0.7;pegar_"..def.id..";Pegar deed]button[6.1,8.8;2.4,0.7;voltar;Voltar]")
 	end
 	if not (handle_schematics and handle_schematics.analyze_mts_file and build_chest and build_chest.preview_image_create_views) then
-		return minetest.chat_send_player(nome, S("O renderizador de prévias não foi carregado; tente novamente após reiniciar o servidor."))
+		return sem_previa(nome, def, "O renderizador de prévias não foi carregado; tente novamente após reiniciar o servidor.")
 	end
 	local chave = "garrafa_tesouro_" .. def.id
 	build_chest.building = build_chest.building or {}
@@ -962,27 +973,27 @@ local function mostrar_previa(nome, def, lado)
 		local ok, carregado = pcall(handle_schematics.analyze_mts_file, caminho)
 		if not ok then
 			minetest.log("error", "[garrafa_tesouro] Falha ao ler prévia de " .. def.id .. ": " .. tostring(carregado))
-			return minetest.chat_send_player(nome, S("Não foi possível montar a prévia desta estrutura."))
+			return sem_previa(nome, def, "Não foi possível montar a prévia desta estrutura.")
 		end
 		dados = carregado
-		if not dados then return minetest.chat_send_player(nome, S("Não foi possível ler a estrutura deste deed.")) end
+		if not dados then return sem_previa(nome, def, "Não foi possível ler a estrutura deste deed.") end
 		dados.yoff = 0
 		local preview_ok, preview = pcall(build_chest.preview_image_create_views, dados)
 		if not preview_ok then
 			minetest.log("error", "[garrafa_tesouro] Falha ao renderizar prévia de " .. def.id .. ": " .. tostring(preview))
-			return minetest.chat_send_player(nome, S("Não foi possível renderizar a prévia desta estrutura."))
+			return sem_previa(nome, def, "Não foi possível renderizar a prévia desta estrutura.")
 		end
 		dados.preview = preview
 		build_chest.building[chave] = dados
 		previews_deed[chave] = true
 	end
 	if not dados or not dados.size then
-		return minetest.chat_send_player(nome, S("Os dados da prévia desta estrutura estão incompletos."))
+		return sem_previa(nome, def, "Os dados da prévia desta estrutura estão incompletos.")
 	end
 	local preview_ok, imagem = pcall(build_chest.preview_image_formspec, chave, {}, lado or "front")
 	if not preview_ok then
 		minetest.log("error", "[garrafa_tesouro] Falha ao exibir prévia de " .. def.id .. ": " .. tostring(imagem))
-		return minetest.chat_send_player(nome, S("Não foi possível exibir a prévia desta estrutura."))
+		return sem_previa(nome, def, "Não foi possível exibir a prévia desta estrutura.")
 	end
 	minetest.show_formspec(nome, "garrafa_tesouro:preview_"..def.id,
 		"formspec_version[4]size[12,11]label[0.4,0.3;"..minetest.formspec_escape(def.nome).." — prévia da estrutura real]"..

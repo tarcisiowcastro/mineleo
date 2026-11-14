@@ -52,6 +52,13 @@ castle_gates https://github.com/minetest-mods/castle_gates
 castle_lighting https://github.com/minetest-mods/castle_lighting
 castle_shields https://github.com/minetest-mods/castle_shields
 castle_storage https://github.com/minetest-mods/castle_storage
+anvil https://github.com/minetest-mods/anvil
+castle_farming https://github.com/minetest-mods/castle_farming
+castle_weapons https://github.com/minetest-mods/castle_weapons
+crafting_bench https://github.com/minetest-mods/crafting_bench
+orbs_of_time https://github.com/minetest-mods/orbs_of_time
+ropes https://github.com/minetest-mods/ropes
+mypaths https://github.com/minetest-mods/mypaths
 "
 
 echo "$mods" | while read -r name url; do
@@ -103,6 +110,40 @@ if [ ! -d "mods/steampunk_blimp" ]; then
   rm -f /tmp/steampunk_blimp.zip
 else
   echo "== steampunk_blimp ja presente (pinado, nao atualiza sozinho)"
+fi
+
+# Fixados num commit (+ patch opcional em scripts/patches/<nome>.patch):
+# - modlib/character_anim: o commit de 2025 corrige o corpo virado nos
+#   clientes Luanti 5.11+, mas usa API do 5.9; o patch adapta para o 5.6.1.
+# - size_editer: corrigido em runtime pelo mod proprio tamanho_jogador.
+pinned="
+modlib https://github.com/appgurueu/modlib 59ed71df15e4e01e0bb096e7b1d709ea9fdb25cb
+character_anim https://github.com/appgurueu/character_anim 61b62ae2c71518bf6363736a63f54010f969c78a
+size_editer https://github.com/HyvoxelCraft/size_editer 9e305c5
+"
+echo "$pinned" | while read -r name url rev; do
+  [ -z "$name" ] && continue
+  if [ ! -d "mods/$name/.git" ]; then
+    echo "== clonando $name (fixo em $rev)"
+    timeout 120 git clone -q "$url" "mods/$name" || { echo "!! $name: clone falhou"; continue; }
+  fi
+  if ! git -C "mods/$name" rev-parse HEAD | grep -q "^$rev"; then
+    timeout 60 git -C "mods/$name" fetch -q origin || true
+    git -C "mods/$name" checkout -q -f "$rev" || echo "!! $name: checkout $rev falhou"
+  fi
+  patch="scripts/patches/$name.patch"
+  if [ -f "$patch" ] && ! git -C "mods/$name" apply --reverse --check "../../$patch" 2>/dev/null; then
+    git -C "mods/$name" apply "../../$patch" && echo "== $name: patch aplicado" || echo "!! $name: patch falhou"
+  fi
+done
+
+# christmastree: sem repositorio git, so zip no ContentDB (release 1.0.2).
+if [ ! -d "mods/christmastree" ]; then
+  echo "== baixando christmastree (release 1.0.2)"
+  curl -sL -o /tmp/christmastree.zip \
+    "https://content.luanti.org/packages/ExeterDad/christmastree/releases/8099/download/"
+  unzip -q -o /tmp/christmastree.zip -d mods/
+  rm -f /tmp/christmastree.zip
 fi
 
 echo

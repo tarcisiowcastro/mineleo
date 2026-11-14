@@ -35,6 +35,8 @@ mods/*
 !mods/garrafa_tesouro/**
 !mods/worldedit_purge
 !mods/worldedit_purge/**
+!mods/tamanho_jogador
+!mods/tamanho_jogador/**
 *.log
 .idea/
 .vscode/
